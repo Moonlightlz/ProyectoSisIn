@@ -70,6 +70,8 @@ export function AuthProvider({ children }) {
 
   // Función para cerrar sesión
   function logout() {
+    // Limpiar la marca de sesión activa para que la próxima vez vaya al login
+    sessionStorage.removeItem('app_session_active');
     return signOut(auth);
   }
 
@@ -89,7 +91,29 @@ export function AuthProvider({ children }) {
 
   // Efecto para manejar cambios en el estado de autenticación
   useEffect(() => {
+    // Verificar si es una nueva sesión del navegador
+    const isNewSession = !sessionStorage.getItem('app_session_active');
+    let hasProcessedInitialState = false;
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // Si es una nueva sesión y hay un usuario autenticado, hacer logout solo una vez
+      if (isNewSession && user && !hasProcessedInitialState) {
+        console.log('Nueva sesión detectada - Cerrando sesión automáticamente para mostrar login');
+        hasProcessedInitialState = true;
+        sessionStorage.setItem('app_session_active', 'true');
+        try {
+          await signOut(auth);
+          return;
+        } catch (error) {
+          console.error('Error al cerrar sesión automáticamente:', error);
+        }
+      }
+      
+      // Marcar que la sesión ya está activa
+      if (!sessionStorage.getItem('app_session_active')) {
+        sessionStorage.setItem('app_session_active', 'true');
+      }
+      
       if (user) {
         console.log('Usuario autenticado:', user.email);
         setCurrentUser(user);
