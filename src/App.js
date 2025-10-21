@@ -7,6 +7,8 @@ import UserProfile from './components/UserProfile'; // Importamos el perfil
 import HomePage from './components/HomePage'; // Importamos la página de inicio
 import CustomerRegistrationForm from './components/CustomerRegistrationForm'; // Importamos el formulario de clientes
 import CustomerListPage from './components/CustomerListPage'; // Importamos la nueva lista de clientes
+import UserForm from './components/UserForm'; // Importamos el formulario de usuarios
+import UserListPage from './components/UserListPage'; // Importamos la nueva lista de usuarios
 import AppLayout from './components/AppLayout'; // Importamos el layout principal
 
 import './App.css';
@@ -16,6 +18,8 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true); // Lo dejamos en true para desarrollo
   // Estado para almacenar la lista de clientes
   const [customers, setCustomers] = useState([]);
+  // Estado para almacenar la lista de usuarios
+  const [users, setUsers] = useState([]);
 
   const handleLoginSuccess = () => {
     setIsLoggedIn(true);
@@ -24,6 +28,11 @@ function App() {
   // Función para añadir un nuevo cliente a la lista
   const addCustomer = (customer) => {
     setCustomers(prevCustomers => [...prevCustomers, { ...customer, id: Date.now() }]);
+  };
+
+  // Función para añadir un nuevo usuario a la lista
+  const addUser = (user) => {
+    setUsers(prevUsers => [...prevUsers, { ...user, id: Date.now() }]);
   };
 
   const handleLogout = () => {
@@ -47,6 +56,8 @@ function App() {
                   <Route path="profile" element={<UserProfile onLogout={handleLogout} />} />
                   <Route path="clientes" element={<CustomerListPage customers={customers} />} />
                   <Route path="clientes/registrar" element={<CustomerRegistrationForm onAddCustomer={addCustomer} />} />
+                  <Route path="usuarios" element={<UserListPage users={users} />} />
+                  <Route path="usuarios/crear" element={<UserForm onAddUser={addUser} />} />
                 </Route>
               </Routes>
             ) : (

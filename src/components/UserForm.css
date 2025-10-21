@@ -1,0 +1,173 @@
+/* UserForm.css */
+
+.user-form-container {
+  font-family: 'Arial', sans-serif;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.user-form {
+  background-color: #ffffff;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px; /* Más ancho para acomodar la sección de permisos */
+  text-align: center;
+  margin-top: 20px;
+}
+
+.user-form h2 {
+  margin-bottom: 10px;
+  color: #333333;
+  font-size: 28px;
+}
+
+.user-form .form-subtitle {
+  margin-bottom: 30px;
+  color: #666666;
+  font-size: 16px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555555;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group select {
+  width: calc(100% - 20px); /* Ajusta el ancho para el padding */
+  padding: 12px 10px;
+  border: 1px solid #dddddd;
+  border-radius: 5px;
+  font-size: 16px;
+  color: #333333;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.role-select {
+  appearance: none; /* Elimina la flecha por defecto del select */
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13.2-5.4H18.6c-5%200-9.3%201.8-13.2%205.4A17.6%2017.6%200%200%200%200%2082.6c0%204.8%201.8%209.3%205.4%2013.2l128%20128c3.9%203.9%208.4%205.4%2013.2%205.4s9.3-1.8%2013.2-5.4l128-128c3.9-3.9%205.4-8.4%205.4-13.2%200-4.8-1.8-9.3-5.4-13.2z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 30px; /* Espacio para la flecha personalizada */
+}
+
+.permissions-section {
+  margin-top: 30px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  text-align: left;
+}
+
+.permissions-section h3 {
+  color: #333;
+  font-size: 22px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.permission-window-group {
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #e9e9e9;
+}
+
+.permission-window-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.permission-window-group h4 {
+  color: #555;
+  font-size: 18px;
+  margin-bottom: 15px;
+  border-left: 4px solid #007bff; /* Barra azul a la izquierda */
+  padding-left: 10px;
+}
+
+.permission-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Columnas responsivas */
+  gap: 15px;
+}
+
+.permission-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.permission-checkbox input[type="checkbox"] {
+  margin-right: 10px;
+  width: auto; /* Anula el ancho por defecto del input */
+  transform: scale(1.2); /* Hace el checkbox un poco más grande */
+}
+
+.permission-checkbox label {
+  margin-bottom: 0;
+  font-weight: normal;
+  color: #444;
+  cursor: pointer;
+}
+
+.form-actions {
+  margin-top: 30px;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 15px;
+  background-color: #007bff; /* Azul para la creación de usuarios */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.submit-button:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.submit-button:active {
+  transform: translateY(0);
+}
+
+.error-message {
+  color: #dc3545;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.success-message {
+  color: #28a745;
+  margin-bottom: 15px;
+  font-size: 14px;
+}

@@ -9,6 +9,7 @@ function AppLayout() {
         <div className="nav-links">
           <NavLink to="/" end>Inicio</NavLink>
           <NavLink to="/clientes">Clientes</NavLink>
+          <NavLink to="/usuarios">Usuarios</NavLink>
           <NavLink to="/profile">Perfil</NavLink>
         </div>
       </nav>

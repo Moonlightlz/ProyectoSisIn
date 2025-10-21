@@ -1,0 +1,96 @@
+/* UserListPage.css */
+
+.user-list-container {
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  max-width: 1200px;
+  margin: 20px auto;
+  font-family: 'Arial', sans-serif;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #f0f2f5;
+  padding-bottom: 20px;
+}
+
+.list-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+}
+
+.create-user-button {
+  padding: 12px 24px;
+  background-color: #28a745; /* Verde para la creación */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.create-user-button:hover {
+  background-color: #218838;
+  transform: translateY(-2px);
+}
+
+.no-users-message {
+  text-align: center;
+  font-size: 18px;
+  color: #666;
+  padding: 40px;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.users-table th,
+.users-table td {
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e5ec;
+}
+
+.users-table th {
+  background-color: #f8f9fa;
+  color: #333;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.users-table tbody tr:hover {
+  background-color: #f0f2f5;
+}
+
+.users-table td {
+  color: #555;
+  font-size: 15px;
+}
+
+.permission-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.permission-list li {
+  margin-bottom: 3px;
+}
+
+.permission-list li:last-child {
+  margin-bottom: 0;
+}
