@@ -1,33 +1,58 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import './Login.css'; // Importamos el archivo CSS para los estilos
 
 function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault(); // Previene el comportamiento por defecto del formulario
     setError(''); // Limpiamos errores previos
+    setLoading(true);
 
     // Validación básica
     if (!email || !password) {
-      setError('Por favor, ingresa tu correo y contraseña.');
+      setError('🔒 Por favor, ingresa tu correo electrónico y contraseña para continuar.');
+      setLoading(false);
       return;
     }
 
-    // Aquí es donde normalmente integrarías tu lógica de autenticación
-    // Por ejemplo, enviarías estos datos a un backend.
-    console.log('Intentando iniciar sesión con:', { email, password });
-
-    // Simulación de una llamada a API
-    if (email === 'admin@calzado.com' && password === 'password123') {
-      alert('¡Inicio de sesión exitoso!');
+    try {
+      await login(email, password);
       onLoginSuccess(); // Llama a la función pasada por App.js
-    } else {
-      setError('Correo o contraseña incorrectos.');
+    } catch (error) {
+      console.error('Error de login:', error);
+      switch (error.code) {
+        case 'auth/user-not-found':
+          setError('👤 No existe una cuenta registrada con este correo electrónico. Verifica que sea correcto.');
+          break;
+        case 'auth/wrong-password':
+          setError('🔑 La contraseña ingresada es incorrecta. Inténtalo nuevamente.');
+          break;
+        case 'auth/invalid-email':
+          setError('📧 El formato del correo electrónico no es válido. Ejemplo: usuario@empresa.com');
+          break;
+        case 'auth/user-disabled':
+          setError('🚫 Esta cuenta ha sido deshabilitada por el administrador. Contacta soporte.');
+          break;
+        case 'auth/too-many-requests':
+          setError('⏰ Demasiados intentos fallidos. Espera unos minutos antes de intentar nuevamente.');
+          break;
+        case 'auth/invalid-credential':
+          setError('❌ Credenciales inválidas. Verifica tu correo y contraseña.');
+          break;
+        default:
+          setError('⚠️ Error al iniciar sesión. Verifica tu conexión e inténtalo nuevamente.');
+      }
     }
+    setLoading(false);
   };
+
+
 
   return (
     <div className="login-container">
@@ -57,12 +82,20 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
             placeholder="••••••••"
           />
         </div>
-        <button type="submit" className="login-button">
-          Entrar
+        <button type="submit" className="login-button" disabled={loading}>
+          {loading ? 'Iniciando sesión...' : 'Entrar'}
         </button>
-        <p className="forgot-password">
-          <a href="#">¿Olvidaste tu contraseña?</a>
-        </p>
+        <div className="login-options">
+          <p className="forgot-password">
+            <button 
+              type="button" 
+              className="forgot-password-link"
+              onClick={() => alert('Funcionalidad no implementada. Contacta al administrador del sistema.')}
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </p>
+        </div>
       </form>
     </div>
   );

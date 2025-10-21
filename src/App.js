@@ -1,63 +1,38 @@
-import React, { useState } from 'react'; // Importamos useState
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Componentes y Páginas
-import Login from './components/Login'; // Importamos el componente Login
-import UserProfile from './components/UserProfile'; // Importamos el perfil
-import HomePage from './components/HomePage'; // Importamos la página de inicio
-import CustomerRegistrationForm from './components/CustomerRegistrationForm'; // Importamos el formulario de clientes
-import CustomerListPage from './components/CustomerListPage'; // Importamos la nueva lista de clientes
-import UserForm from './components/UserForm'; // Importamos el formulario de usuarios
-import UserListPage from './components/UserListPage'; // Importamos la nueva lista de usuarios
-import AppLayout from './components/AppLayout'; // Importamos el layout principal
+import Login from './components/Login';
+import UserProfile from './components/UserProfile';
+import HomePage from './components/HomePage';
+import UserManagement from './components/UserManagement';
+import AppLayout from './components/AppLayout';
 
 import './App.css';
+import './debugUser'; // Importar herramientas de debugging
+import './emergencyAuth'; // Importar funciones de emergencia
 
-function App() {
-  // Estado para controlar si el usuario ha iniciado sesión
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // Lo dejamos en true para desarrollo
-  // Estado para almacenar la lista de clientes
-  const [customers, setCustomers] = useState([]);
-  // Estado para almacenar la lista de usuarios
-  const [users, setUsers] = useState([]);
-
-  const handleLoginSuccess = () => {
-    setIsLoggedIn(true);
-  };
-
-  // Función para añadir un nuevo cliente a la lista
-  const addCustomer = (customer) => {
-    setCustomers(prevCustomers => [...prevCustomers, { ...customer, id: Date.now() }]);
-  };
-
-  // Función para añadir un nuevo usuario a la lista
-  const addUser = (user) => {
-    setUsers(prevUsers => [...prevUsers, { ...user, id: Date.now() }]);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-  };
+// Componente interno que usa el hook useAuth
+function AppContent() {
+  const { currentUser, logout } = useAuth();
 
   return (
     <BrowserRouter>
       <Routes>
         <Route
           path="/login"
-          element={isLoggedIn ? <Navigate to="/" /> : <Login onLoginSuccess={handleLoginSuccess} />}
+          element={currentUser ? <Navigate to="/" /> : <Login />}
         />
         <Route
-          path="/*" // Cualquier otra ruta
+          path="/*"
           element={
-            isLoggedIn ? (
+            currentUser ? (
               <Routes>
-                <Route element={<AppLayout />}>
+                <Route element={<AppLayout onLogout={logout} />}>
                   <Route index element={<HomePage />} />
-                  <Route path="profile" element={<UserProfile onLogout={handleLogout} />} />
-                  <Route path="clientes" element={<CustomerListPage customers={customers} />} />
-                  <Route path="clientes/registrar" element={<CustomerRegistrationForm onAddCustomer={addCustomer} />} />
-                  <Route path="usuarios" element={<UserListPage users={users} />} />
-                  <Route path="usuarios/crear" element={<UserForm onAddUser={addUser} />} />
+                  <Route path="profile" element={<UserProfile />} />
+                  <Route path="users" element={<UserManagement />} />
                 </Route>
               </Routes>
             ) : (
@@ -67,6 +42,15 @@ function App() {
         />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+// Componente principal que proporciona el contexto
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

@@ -18,9 +18,42 @@
   box-sizing: border-box;
 }
 
+.nav-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.user-info {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
 .nav-links {
   display: flex;
   gap: 30px;
+  align-items: center;
+}
+
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.logout-btn:hover {
+  background: #c82333;
 }
 
 .nav-links a {
