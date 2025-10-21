@@ -10,9 +10,9 @@ const salesData = [
     distributor: { name: 'Carlos Mendoza', id: 'DIST-004' },
     client: { name: 'Zapatería El Gran Paso', id: 'CLI-032' },
     products: [
-      { name: 'Bota de Cuero Clásica', type: 'Caballero', quantity: 12, price: 45.50 },
-      { name: 'Sandalia Verano Fresh', type: 'Dama', quantity: 24, price: 25.00 },
-      { name: 'Zapato Escolar Resistente', type: 'Niño', quantity: 20, price: 22.75 },
+      { name: 'Bota de Cuero Clásica', type: 'Caballero', quantity: 12, price: 45.50, tallas: '40, 41, 42' },
+      { name: 'Sandalia Verano Fresh', type: 'Dama', quantity: 24, price: 25.00, tallas: '37, 38' },
+      { name: 'Zapato Escolar Resistente', type: 'Niño', quantity: 20, price: 22.75, tallas: '30, 32, 34' },
     ],
     get totalQuantity() { return this.products.reduce((sum, p) => sum + p.quantity, 0); },
     get totalCost() { return this.products.reduce((sum, p) => sum + (p.quantity * p.price), 0); }
@@ -23,8 +23,8 @@ const salesData = [
     distributor: { name: 'Ana García', id: 'DIST-002' },
     client: { name: 'Tiendas La Elegancia', id: 'CLI-015' },
     products: [
-      { name: 'Zapatilla Deportiva Runner', type: 'Unisex', quantity: 30, price: 55.00 },
-      { name: 'Mocasín de Oficina', type: 'Caballero', quantity: 15, price: 60.20 },
+      { name: 'Zapatilla Deportiva Runner', type: 'Unisex', quantity: 30, price: 55.00, tallas: '39, 40, 41' },
+      { name: 'Mocasín de Oficina', type: 'Caballero', quantity: 15, price: 60.20, tallas: '42, 43' },
     ],
     get totalQuantity() { return this.products.reduce((sum, p) => sum + p.quantity, 0); },
     get totalCost() { return this.products.reduce((sum, p) => sum + (p.quantity * p.price), 0); }
@@ -35,7 +35,7 @@ const salesData = [
     distributor: { name: 'Luis Torres', id: 'DIST-007' },
     client: { name: 'Calzados Rápidos S.A.', id: 'CLI-088' },
     products: [
-      { name: 'Bota de Lluvia Infantil', type: 'Niña', quantity: 50, price: 15.00 },
+      { name: 'Bota de Lluvia Infantil', type: 'Niña', quantity: 50, price: 15.00, tallas: '28, 29, 30' },
     ],
     get totalQuantity() { return this.products.reduce((sum, p) => sum + p.quantity, 0); },
     get totalCost() { return this.products.reduce((sum, p) => sum + (p.quantity * p.price), 0); }
@@ -76,9 +76,10 @@ const SaleDetailsView = ({ sale, onClose }) => {
             <thead>
               <tr>
                 <th>Producto</th>
+                <th>Tallas</th>
                 <th>Tipo</th>
-                <th>Cantidad</th>
-                <th>Costo Unit.</th>
+                <th>Cantidad (Docenas)</th>
+                <th>Precio por Docena</th>
                 <th>Subtotal</th>
               </tr>
             </thead>
@@ -86,10 +87,11 @@ const SaleDetailsView = ({ sale, onClose }) => {
               {sale.products.map((product, index) => (
                 <tr key={index}>
                   <td>{product.name}</td>
+                  <td>{product.tallas}</td>
                   <td>{product.type}</td>
-                  <td>{product.quantity}</td>
-                  <td>S/ {product.price.toFixed(2)}</td>
-                  <td>S/ {(product.quantity * product.price).toFixed(2)}</td>
+                  <td>{Math.floor(product.quantity / 12)}</td>
+                  <td>S/ {(product.price * 12).toFixed(2)}</td>
+                  <td>S/ {(Math.floor(product.quantity / 12) * (product.price * 12)).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
