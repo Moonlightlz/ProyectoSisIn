@@ -6,6 +6,7 @@ import { workerService, payrollSettingsService } from '../services/workerService
 import { createPayrollRecord } from '../services/payrollRecordService';
 import { salaryAdjustmentService } from '../services/salaryAdjustmentService';
 import WorkerPayrollService from '../services/workerPayrollService';
+import { BonusService } from '../services/bonusService';
 import Modal from './Modal';
 import PayrollAdjustmentModal from './PayrollAdjustmentModal';
 import PayrollHistoryModal from './PayrollHistoryModal';
@@ -228,8 +229,9 @@ const WorkerManagement: React.FC = () => {
   };
 
   // Función para calcular planilla individual con ajustes opcionales
-  const calculateWorkerPayroll = (worker: Worker) => {
+  const calculateWorkerPayroll = (worker: Worker, bonuses: Bonus[] = []) => {
     console.log('Calculando planilla para trabajador:', worker.name);
+    console.log('Bonos cargados para el cálculo:', bonuses);
     
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -237,7 +239,6 @@ const WorkerManagement: React.FC = () => {
 
     // Sin datos de asistencia hasta que se implemente el módulo
     const mockAttendance: any[] = [];
-    const mockBonuses: any[] = [];
 
     // Verificar si hay ajustes para este trabajador
     const adjustmentRecord = workerAdjustments[worker.id];
@@ -252,7 +253,7 @@ const WorkerManagement: React.FC = () => {
       calculatePayrollWithAdjustments(
         worker,
         mockAttendance,
-        mockBonuses,
+        bonuses, // Usar bonos cargados directamente
         [], // overtime records - por implementar
         { startDate, endDate, type: 'monthly' },
         payrollSettings,
@@ -261,7 +262,7 @@ const WorkerManagement: React.FC = () => {
       calculatePayroll(
         worker,
         mockAttendance,
-        mockBonuses,
+        bonuses, // Usar bonos cargados directamente
         [], // overtime records - por implementar
         { startDate, endDate, type: 'monthly' },
         payrollSettings
@@ -358,12 +359,23 @@ const WorkerManagement: React.FC = () => {
           // Continuar sin ajustes si hay error
         }
 
-        // Paso 2: Calcular planilla
-        console.log('Paso 2: Iniciando cálculo...');
+        // Paso 1.5: Cargar bonos del período
+        console.log('Paso 1.5: Cargando bonos desde Firebase...');
+        let workerBonuses: Bonus[] = [];
+        try {
+          workerBonuses = await BonusService.getWorkerBonusesByPeriod(worker.id, startDate, endDate);
+          console.log('✅ Bonos cargados:', workerBonuses);
+        } catch (bonusError) {
+          console.error('Error cargando bonos:', bonusError);
+          // Continuar sin bonos si hay error
+        }
+
+        // Paso 2: Calcular planilla con bonos
+        console.log('Paso 2: Iniciando cálculo con bonos...');
         let calculation;
         
         try {
-          calculation = calculateWorkerPayroll(worker);
+          calculation = calculateWorkerPayroll(worker, workerBonuses);
           console.log('Paso 3: Cálculo completado:', calculation);
         } catch (calcError) {
           console.error('Error en calculateWorkerPayroll:', calcError);
@@ -377,21 +389,7 @@ const WorkerManagement: React.FC = () => {
         }));
         console.log('Paso 4: Cálculo guardado en estado');
         
-        // Opcional: Guardar el registro en la base de datos
-        try {
-          console.log('Paso 5: Guardando en base de datos...');
-          await createPayrollRecord(calculation, {
-            paymentStatus: 'pending',
-            notes: `Planilla monthly generada automáticamente`
-          });
-          console.log('Paso 6: Guardado en base de datos exitoso');
-        } catch (dbError) {
-          console.error('Error al guardar en base de datos:', dbError);
-          // No fallar si solo es el guardado en DB, mostrar warning
-          console.warn('Planilla calculada pero no pudo guardarse en BD');
-        }
-        
-        console.log('Planilla calculada exitosamente');
+        console.log('Planilla calculada exitosamente - Solo para visualización');
         
         // Finalizar estado de carga (éxito)
         setPayrollLoading(prev => ({
@@ -494,8 +492,14 @@ const WorkerManagement: React.FC = () => {
       for (const month of months) {
         console.log(`🔧 DEBUG: Procesando ${month.name}...`);
         
-        // Calcular planilla para cada mes
-        const payrollData = calculateWorkerPayroll(worker);
+        // Cargar bonos para el mes específico
+        const monthStart = new Date(month.date.getFullYear(), month.date.getMonth(), 1);
+        const monthEnd = new Date(month.date.getFullYear(), month.date.getMonth() + 1, 0);
+        const monthBonuses = await BonusService.getWorkerBonusesByPeriod(worker.id, monthStart, monthEnd);
+        console.log(`🔧 DEBUG: Bonos para ${month.name}:`, monthBonuses);
+        
+        // Calcular planilla para cada mes con bonos
+        const payrollData = calculateWorkerPayroll(worker, monthBonuses);
         console.log('🔧 DEBUG: Datos de planilla calculados:', payrollData);
         
         // Crear registro usando la estructura PayrollCalculation correcta

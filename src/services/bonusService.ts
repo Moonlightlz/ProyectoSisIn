@@ -94,12 +94,11 @@ export class BonusService {
         endDate: endDate.toISOString()
       });
       
+      // Consulta simplificada para evitar requerir índice compuesto
+      // TODO: Crear índice compuesto en Firebase y restaurar filtrado por fecha en query
       const q = query(
         collection(db, 'bonuses'),
-        where('workerId', '==', workerId),
-        where('date', '>=', Timestamp.fromDate(startDate)),
-        where('date', '<=', Timestamp.fromDate(endDate)),
-        orderBy('date', 'desc')
+        where('workerId', '==', workerId)
       );
 
       const querySnapshot = await getDocs(q);
@@ -107,17 +106,25 @@ export class BonusService {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        bonuses.push({
-          id: doc.id,
-          workerId: data.workerId,
-          date: data.date.toDate(),
-          amount: data.amount,
-          description: data.description,
-          type: data.type,
-          createdBy: data.createdBy,
-          createdAt: data.createdAt.toDate()
-        });
+        const bonusDate = data.date.toDate();
+        
+        // Filtrar por período en JavaScript ya que no podemos usar múltiples where + orderBy sin índice
+        if (bonusDate >= startDate && bonusDate <= endDate) {
+          bonuses.push({
+            id: doc.id,
+            workerId: data.workerId,
+            date: bonusDate,
+            amount: data.amount,
+            description: data.description,
+            type: data.type,
+            createdBy: data.createdBy,
+            createdAt: data.createdAt.toDate()
+          });
+        }
       });
+
+      // Ordenar por fecha (más reciente primero) ya que no podemos usar orderBy sin índice
+      bonuses.sort((a, b) => b.date.getTime() - a.date.getTime());
 
       console.log(`📊 Encontrados ${bonuses.length} bonos para período`);
       return bonuses;

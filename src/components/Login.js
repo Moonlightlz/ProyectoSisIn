@@ -23,7 +23,10 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
 
     try {
       await login(email, password);
-      onLoginSuccess(); // Llama a la función pasada por App.js
+      // La navegación se maneja automáticamente por React Router cuando currentUser cambia
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
     } catch (error) {
       console.error('Error de login:', error);
       switch (error.code) {

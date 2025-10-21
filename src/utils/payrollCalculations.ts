@@ -347,6 +347,13 @@ export const calculatePayrollWithAdjustments = (
   }
   
   // Recalcular pago bruto con ajustes
+  console.log('🔧 DEBUG BONOS - Antes del cálculo bruto:', {
+    regularPay: adjustedCalculation.regularPay,
+    overtimePay: adjustedCalculation.overtimePay,
+    bonuses: adjustedCalculation.bonuses,
+    workedDays: adjustedCalculation.workedDays
+  });
+  
   let adjustedGrossPay = adjustedCalculation.regularPay + adjustedCalculation.overtimePay + adjustedCalculation.bonuses;
   
   // Agregar bonos manuales
@@ -355,9 +362,20 @@ export const calculatePayrollWithAdjustments = (
     adjustedCalculation.bonuses += adjustment.manualBonuses;
   }
   
+  console.log('🔧 DEBUG BONOS - Después del cálculo bruto:', {
+    adjustedGrossPay,
+    totalBonuses: adjustedCalculation.bonuses
+  });
+  
   // Aplicar descuentos personalizados o usar proporcionales
   const daysInMonth = 30;
   const adjustedProportionWorked = adjustedCalculation.workedDays / daysInMonth;
+  
+  console.log('🔧 DEBUG DESCUENTOS:', {
+    workedDays: adjustedCalculation.workedDays,
+    proportionWorked: adjustedProportionWorked,
+    grossPay: adjustedGrossPay
+  });
   
   // Solo aplicar descuentos si hay días trabajados o pago bruto
   const hasWorkOrPay = adjustedCalculation.workedDays > 0 || adjustedGrossPay > 0;
@@ -372,7 +390,22 @@ export const calculatePayrollWithAdjustments = (
     (hasWorkOrPay && adjustedProportionWorked > 0 ? settings.essaludAmount * adjustedProportionWorked : 0);
   
   // Los descuentos por ausencias y tardanzas solo se aplican si hubo trabajo
-  const appliedAbsentDiscounts = hasWorkOrPay ? adjustedCalculation.absentDiscounts : 0;
+  // CORREGIDO: Recalcular descuentos por ausencias basándose en días ajustados
+  const dailyRate = worker.baseSalary / 30;
+  const recalculatedAbsentDiscounts = adjustedCalculation.absentDays * dailyRate;
+  
+  console.log('🔧 DEBUG AUSENCIAS CORREGIDAS:', {
+    absentDaysOriginal: baseCalculation.absentDays,
+    absentDaysAdjusted: adjustedCalculation.absentDays,
+    dailyRate: dailyRate,
+    absentDiscountsOriginal: adjustedCalculation.absentDiscounts,
+    recalculatedAbsentDiscounts: recalculatedAbsentDiscounts,
+    logicaCorrecta: 'No descuentos por ausencias - solo pago por días trabajados'
+  });
+  
+  // LÓGICA CORREGIDA: No aplicar descuentos por ausencias
+  // Si trabajó 15 días, se le paga por 15 días. No hay descuento adicional por los 15 días no trabajados.
+  const appliedAbsentDiscounts = 0;
   const appliedLateDiscounts = hasWorkOrPay ? adjustedCalculation.lateDiscounts : 0;
   
   // Calcular descuentos totales
@@ -382,6 +415,15 @@ export const calculatePayrollWithAdjustments = (
     adjustedInvalidInsurance + 
     adjustedPensionFund + 
     adjustedEssaludDeduction;
+  
+  console.log('🔧 DEBUG DESCUENTOS DETALLE:', {
+    absentDiscounts: appliedAbsentDiscounts,
+    lateDiscounts: appliedLateDiscounts,
+    invalidInsurance: adjustedInvalidInsurance,
+    pensionFund: adjustedPensionFund,
+    essaludDeduction: adjustedEssaludDeduction,
+    totalDiscounts: adjustedTotalDiscounts
+  });
   
   // Agregar descuentos manuales
   if (adjustment.manualDeductions) {
