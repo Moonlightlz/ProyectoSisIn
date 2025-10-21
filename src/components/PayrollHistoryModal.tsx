@@ -173,15 +173,6 @@ const PayrollHistoryModal: React.FC<PayrollHistoryModalProps> = ({
                                 ✅
                               </button>
                             )}
-                            {record.paymentStatus !== 'cancelled' && (
-                              <button
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleUpdatePaymentStatus(record.id, 'cancelled')}
-                                title="Cancelar"
-                              >
-                                ❌
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>

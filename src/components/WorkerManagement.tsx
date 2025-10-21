@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Worker, WorkerFormData, PayrollSettings, PayrollAdjustmentRecord } from '../types/payroll';
+import { Worker, WorkerFormData, PayrollSettings, PayrollAdjustmentRecord, Bonus, PayrollCalculation } from '../types/payroll';
 import { calculatePayroll, calculatePayrollWithAdjustments, formatCurrency, formatHours, DEFAULT_PAYROLL_SETTINGS } from '../utils/payrollCalculations';
 import { workerService, payrollSettingsService } from '../services/workerService';
 import { createPayrollRecord } from '../services/payrollRecordService';
@@ -9,7 +9,9 @@ import WorkerPayrollService from '../services/workerPayrollService';
 import Modal from './Modal';
 import PayrollAdjustmentModal from './PayrollAdjustmentModal';
 import PayrollHistoryModal from './PayrollHistoryModal';
+import BonusModal from './BonusModal';
 import { useModal } from '../hooks/useModal';
+
 import './WorkerManagement.css';
 
 const WorkerManagement: React.FC = () => {
@@ -24,7 +26,6 @@ const WorkerManagement: React.FC = () => {
   // Estados de formularios
   const [showCreateWorkerForm, setShowCreateWorkerForm] = useState(false);
   const [showPayrollSettings, setShowPayrollSettings] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly'>('monthly');
   
   // Estados para ajustes de planilla
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
@@ -37,6 +38,10 @@ const WorkerManagement: React.FC = () => {
   // Estados para historial de pagos
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedWorkerForHistory, setSelectedWorkerForHistory] = useState<Worker | null>(null);
+  
+  // Estados para bonos
+  const [showBonusModal, setShowBonusModal] = useState(false);
+  const [selectedWorkerForBonus, setSelectedWorkerForBonus] = useState<Worker | null>(null);
   
   // Estados para ajuste de sueldo
   const [showSalaryAdjustmentModal, setShowSalaryAdjustmentModal] = useState(false);
@@ -109,16 +114,13 @@ const WorkerManagement: React.FC = () => {
   const loadWorkersAdjustments = async (workers: Worker[]) => {
     try {
       console.log('🔍 Iniciando carga de ajustes para', workers.length, 'trabajadores');
-      console.log('🗓️ Período seleccionado:', selectedPeriod);
+      console.log('🗓️ Período seleccionado: monthly');
       
       const now = new Date();
-      const startDate = selectedPeriod === 'monthly' ? 
-        new Date(now.getFullYear(), now.getMonth(), 1) :
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
       
-      const endDate = selectedPeriod === 'monthly' ?
-        new Date(now.getFullYear(), now.getMonth() + 1, 0) :
-        new Date();
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
       console.log('📅 Rango de fechas:', {
         startDate: startDate.toISOString(),
@@ -230,13 +232,8 @@ const WorkerManagement: React.FC = () => {
     console.log('Calculando planilla para trabajador:', worker.name);
     
     const now = new Date();
-    const startDate = selectedPeriod === 'monthly' ? 
-      new Date(now.getFullYear(), now.getMonth(), 1) :
-      new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    
-    const endDate = selectedPeriod === 'monthly' ?
-      new Date(now.getFullYear(), now.getMonth() + 1, 0) :
-      new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
     // Sin datos de asistencia hasta que se implemente el módulo
     const mockAttendance: any[] = [];
@@ -257,7 +254,7 @@ const WorkerManagement: React.FC = () => {
         mockAttendance,
         mockBonuses,
         [], // overtime records - por implementar
-        { startDate, endDate, type: selectedPeriod },
+        { startDate, endDate, type: 'monthly' },
         payrollSettings,
         adjustment
       ) :
@@ -266,7 +263,7 @@ const WorkerManagement: React.FC = () => {
         mockAttendance,
         mockBonuses,
         [], // overtime records - por implementar
-        { startDate, endDate, type: selectedPeriod },
+        { startDate, endDate, type: 'monthly' },
         payrollSettings
       );
 
@@ -288,7 +285,7 @@ const WorkerManagement: React.FC = () => {
       try {
         console.log(`Calculando planilla para ${worker.name}...`);
         console.log('Worker data:', worker);
-        console.log('Selected period:', selectedPeriod);
+        console.log('Selected period: monthly');
         console.log('Payroll settings:', payrollSettings);
         
         // Iniciar estado de carga
@@ -306,13 +303,8 @@ const WorkerManagement: React.FC = () => {
         // Paso 1: Cargar ajustes desde Firebase
         console.log('Paso 1: Cargando ajustes desde Firebase...');
         const now = new Date();
-        const startDate = selectedPeriod === 'monthly' ? 
-          new Date(now.getFullYear(), now.getMonth(), 1) :
-          new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        
-        const endDate = selectedPeriod === 'monthly' ?
-          new Date(now.getFullYear(), now.getMonth() + 1, 0) :
-          new Date();
+        const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
         let loadedAdjustments;
         try {
@@ -390,7 +382,7 @@ const WorkerManagement: React.FC = () => {
           console.log('Paso 5: Guardando en base de datos...');
           await createPayrollRecord(calculation, {
             paymentStatus: 'pending',
-            notes: `Planilla ${selectedPeriod} generada automáticamente`
+            notes: `Planilla monthly generada automáticamente`
           });
           console.log('Paso 6: Guardado en base de datos exitoso');
         } catch (dbError) {
@@ -457,6 +449,81 @@ const WorkerManagement: React.FC = () => {
     setSelectedWorkerForHistory(null);
   };
 
+  // Manejar bonos
+  const handleShowBonus = (worker: Worker) => {
+    setSelectedWorkerForBonus(worker);
+    setShowBonusModal(true);
+  };
+
+  const handleCloseBonusModal = () => {
+    setShowBonusModal(false);
+    setSelectedWorkerForBonus(null);
+  };
+
+  const handleBonusAdded = async (bonus: Bonus) => {
+    // El modal ya maneja la creación del bono, solo necesitamos cerrar y actualizar
+    handleCloseBonusModal();
+    console.log('Bono agregado exitosamente:', bonus);
+    // Aquí podríamos refreschar la lista o hacer otras actualizaciones necesarias
+  };
+
+  // DEBUG: Generar historial de 3 meses para testing
+  const handleGenerateDebugHistory = async (worker: Worker) => {
+    if (!window.confirm(`¿Generar historial de pagos de 3 meses para ${worker.name}? (Solo para debug)`)) {
+      return;
+    }
+
+    try {
+      console.log('🔧 DEBUG: Generando historial de 3 meses para:', worker.name);
+      console.log('🔧 DEBUG: Usuario actual:', currentUser);
+      console.log('🔧 DEBUG: Worker data:', worker);
+      
+      if (!currentUser) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      const now = new Date();
+      const months = [
+        { name: 'Mes 1', date: new Date(now.getFullYear(), now.getMonth() - 2, 27) },
+        { name: 'Mes 2', date: new Date(now.getFullYear(), now.getMonth() - 1, 27) },
+        { name: 'Mes 3', date: new Date(now.getFullYear(), now.getMonth(), 27) }
+      ];
+
+      console.log('🔧 DEBUG: Meses a generar:', months);
+
+      for (const month of months) {
+        console.log(`🔧 DEBUG: Procesando ${month.name}...`);
+        
+        // Calcular planilla para cada mes
+        const payrollData = calculateWorkerPayroll(worker);
+        console.log('🔧 DEBUG: Datos de planilla calculados:', payrollData);
+        
+        // Crear registro usando la estructura PayrollCalculation correcta
+        const paymentRecord: PayrollCalculation = {
+          ...payrollData, // Ya contiene todos los campos necesarios
+          period: {
+            startDate: new Date(month.date.getFullYear(), month.date.getMonth(), 1),
+            endDate: new Date(month.date.getFullYear(), month.date.getMonth() + 1, 0),
+            type: 'monthly' as const
+          },
+          createdAt: month.date,
+          calculatedBy: currentUser.uid
+        };
+
+        console.log('🔧 DEBUG: Registro a crear:', paymentRecord);
+
+        await createPayrollRecord(paymentRecord);
+        console.log(`✅ Registro creado exitosamente para ${month.name}`);
+      }
+
+      alert(`Historial de 3 meses generado exitosamente para ${worker.name}`);
+    } catch (error) {
+      console.error('🚨 Error completo generando historial debug:', error);
+      console.error('🚨 Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+      alert(`Error al generar historial de debug: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
+  };
+
   // Abrir modal de ajuste de sueldo
   const handleShowSalaryAdjustment = (worker: Worker) => {
     setSelectedWorkerForSalaryAdjustment(worker);
@@ -521,32 +588,11 @@ const WorkerManagement: React.FC = () => {
       <div className="header">
         <h1>Gestión de Trabajadores</h1>
         <div className="header-actions">
-          <select 
-            value={selectedPeriod} 
-            onChange={(e) => setSelectedPeriod(e.target.value as 'weekly' | 'monthly')}
-            className="period-selector"
-          >
-            <option value="weekly">Semanal</option>
-            <option value="monthly">Mensual</option>
-          </select>
           <button 
             className="btn btn-primary" 
             onClick={() => setShowPayrollSettings(true)}
           >
             ⚙️ Configurar Planilla
-          </button>
-          <button 
-            className="btn btn-secondary" 
-            onClick={async () => {
-              console.log('🔧 Ejecutando pruebas de Firebase...');
-              if ((window as any).testFirebaseConnection) {
-                await (window as any).testFirebaseConnection();
-              } else {
-                console.error('testFirebaseConnection no disponible');
-              }
-            }}
-          >
-            🔧 Probar Firebase
           </button>
           <button 
             className="btn btn-primary" 
@@ -607,7 +653,7 @@ const WorkerManagement: React.FC = () => {
                     </div>
                   ) : calculation ? (
                     <>
-                      <h4>Planilla {selectedPeriod === 'monthly' ? 'Mensual' : 'Semanal'}</h4>
+                      <h4>Planilla Mensual</h4>
                   <div className="summary-grid">
                     <div className="summary-item">
                       <span> Horas Trabajadas:</span>
@@ -689,9 +735,18 @@ const WorkerManagement: React.FC = () => {
                 </button>
                 <button 
                   className="btn btn-success"
-                  onClick={() => alert('Función por implementar')}
+                  onClick={() => handleShowBonus(worker)}
+                  title="Agregar bono al trabajador"
                 >
-                  Agregar Bono
+                  💰 Agregar Bono
+                </button>
+                <button 
+                  className="btn btn-debug"
+                  onClick={() => handleGenerateDebugHistory(worker)}
+                  title="[DEBUG] Generar historial de 3 meses para testing"
+                  style={{ backgroundColor: '#ff6b6b', color: 'white', fontSize: '12px' }}
+                >
+                  🔧 Debug Historial
                 </button>
                 {workerAdjustments[worker.id] && (
                   <span className="adjustment-indicator" title="Este trabajador tiene ajustes manuales">
@@ -930,6 +985,16 @@ const WorkerManagement: React.FC = () => {
           isOpen={showHistoryModal}
           onClose={handleCloseHistoryModal}
           worker={selectedWorkerForHistory}
+        />
+      )}
+
+      {/* Modal de bonos */}
+      {selectedWorkerForBonus && (
+        <BonusModal
+          isOpen={showBonusModal}
+          onClose={handleCloseBonusModal}
+          worker={selectedWorkerForBonus}
+          onBonusAdded={handleBonusAdded}
         />
       )}
 

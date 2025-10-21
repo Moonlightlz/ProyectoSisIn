@@ -39,7 +39,8 @@ export const createPayrollRecord = async (
   try {
     console.log('Creating payroll record for worker:', calculation.workerId);
     
-    const recordData = {
+    // Crear objeto solo con campos definidos para evitar undefined en Firebase
+    const recordData: any = {
       ...calculation,
       period: {
         ...calculation.period,
@@ -47,24 +48,45 @@ export const createPayrollRecord = async (
         endDate: Timestamp.fromDate(calculation.period.endDate)
       },
       createdAt: Timestamp.fromDate(calculation.createdAt),
-      paymentStatus: paymentInfo?.paymentStatus || 'pending',
-      paymentMethod: paymentInfo?.paymentMethod,
-      paymentReference: paymentInfo?.paymentReference,
-      notes: paymentInfo?.notes,
-      ...(paymentInfo?.paymentStatus === 'paid' && { paymentDate: Timestamp.now() })
+      paymentStatus: paymentInfo?.paymentStatus || 'pending'
     };
+
+    // Solo agregar campos opcionales si tienen valor
+    if (paymentInfo?.paymentMethod) {
+      recordData.paymentMethod = paymentInfo.paymentMethod;
+    }
+    if (paymentInfo?.paymentReference) {
+      recordData.paymentReference = paymentInfo.paymentReference;
+    }
+    if (paymentInfo?.notes) {
+      recordData.notes = paymentInfo.notes;
+    }
+    if (paymentInfo?.paymentStatus === 'paid') {
+      recordData.paymentDate = Timestamp.now();
+    }
 
     const docRef = await addDoc(collection(db, COLLECTION_NAME), recordData);
     
-    const newRecord: PayrollRecord = {
+    // Crear el objeto de retorno con la misma lógica
+    const newRecord: any = {
       id: docRef.id,
       ...calculation,
-      paymentStatus: paymentInfo?.paymentStatus || 'pending',
-      paymentMethod: paymentInfo?.paymentMethod,
-      paymentReference: paymentInfo?.paymentReference,
-      notes: paymentInfo?.notes,
-      ...(paymentInfo?.paymentStatus === 'paid' && { paymentDate: new Date() })
+      paymentStatus: paymentInfo?.paymentStatus || 'pending'
     };
+
+    // Solo agregar campos opcionales si tienen valor
+    if (paymentInfo?.paymentMethod) {
+      newRecord.paymentMethod = paymentInfo.paymentMethod;
+    }
+    if (paymentInfo?.paymentReference) {
+      newRecord.paymentReference = paymentInfo.paymentReference;
+    }
+    if (paymentInfo?.notes) {
+      newRecord.notes = paymentInfo.notes;
+    }
+    if (paymentInfo?.paymentStatus === 'paid') {
+      newRecord.paymentDate = new Date();
+    }
 
     console.log('Payroll record created successfully:', newRecord.id);
     return newRecord;
@@ -79,10 +101,11 @@ export const getWorkerPayrollHistory = async (workerId: string): Promise<Payroll
   try {
     console.log('Getting payroll history for worker:', workerId);
     
+    // Consulta simplificada sin orderBy para evitar requerir índice
+    // TODO: Crear índice compuesto en Firebase y restaurar orderBy('createdAt', 'desc')
     const q = query(
       collection(db, COLLECTION_NAME),
-      where('workerId', '==', workerId),
-      orderBy('createdAt', 'desc')
+      where('workerId', '==', workerId)
     );
     
     const querySnapshot = await getDocs(q);
@@ -132,6 +155,9 @@ export const getWorkerPayrollHistory = async (workerId: string): Promise<Payroll
         paymentDate: data.paymentDate?.toDate()
       });
     });
+    
+    // Ordenar por fecha de creación (más reciente primero) ya que no podemos usar orderBy sin índice
+    records.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     
     console.log(`Found ${records.length} payroll records for worker ${workerId}`);
     return records;

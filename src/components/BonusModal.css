@@ -1,0 +1,142 @@
+/* Estilos para el Modal de Bonos */
+.bonus-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.bonus-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bonus-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bonus-form label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.required {
+  color: #dc3545;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  overflow: hidden;
+  background: white;
+}
+
+.input-prefix {
+  background: #f8f9fa;
+  padding: 12px 15px;
+  border-right: 1px solid #ced4da;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.input-group input {
+  border: none;
+  padding: 12px 15px;
+  font-size: 14px;
+  flex: 1;
+  outline: none;
+}
+
+.input-group input:focus {
+  box-shadow: inset 0 0 0 2px #007bff;
+}
+
+.bonus-form input,
+.bonus-form select,
+.bonus-form textarea {
+  padding: 12px 15px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+  font-size: 14px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.bonus-form input:focus,
+.bonus-form select:focus,
+.bonus-form textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.bonus-form textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.bonus-form input:disabled,
+.bonus-form select:disabled,
+.bonus-form textarea:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 12px 15px;
+  border-radius: 5px;
+  border: 1px solid #f5c6cb;
+  font-size: 14px;
+  margin: 10px 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.modal-actions .btn {
+  min-width: 120px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .bonus-modal {
+    width: 95%;
+    margin: 10px;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+  }
+  
+  .input-group {
+    flex-direction: column;
+  }
+  
+  .input-prefix {
+    border-right: none;
+    border-bottom: 1px solid #ced4da;
+    text-align: center;
+  }
+}
