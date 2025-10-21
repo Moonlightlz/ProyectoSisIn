@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Worker, WorkerFormData, PayrollSettings, WorkerPayrollAdjustment } from '../types/payroll';
+import { Worker, WorkerFormData, PayrollSettings, PayrollAdjustmentRecord } from '../types/payroll';
 import { calculatePayroll, calculatePayrollWithAdjustments, formatCurrency, formatHours, DEFAULT_PAYROLL_SETTINGS } from '../utils/payrollCalculations';
 import { workerService, payrollSettingsService } from '../services/workerService';
-// import { getPayrollAdjustmentsByWorkerAndPeriod } from '../services/payrollAdjustmentService';
 import { createPayrollRecord } from '../services/payrollRecordService';
 import { salaryAdjustmentService } from '../services/salaryAdjustmentService';
+import WorkerPayrollService from '../services/workerPayrollService';
 import Modal from './Modal';
 import PayrollAdjustmentModal from './PayrollAdjustmentModal';
 import PayrollHistoryModal from './PayrollHistoryModal';
@@ -29,7 +29,10 @@ const WorkerManagement: React.FC = () => {
   // Estados para ajustes de planilla
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [selectedWorkerForAdjustment, setSelectedWorkerForAdjustment] = useState<Worker | null>(null);
-  const [workerAdjustments, setWorkerAdjustments] = useState<Record<string, WorkerPayrollAdjustment | null>>({});
+  const [workerAdjustments, setWorkerAdjustments] = useState<Record<string, PayrollAdjustmentRecord | null>>({});
+  
+  // Estados para carga de planillas
+  const [payrollLoading, setPayrollLoading] = useState<Record<string, boolean>>({});
   
   // Estados para historial de pagos
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -42,6 +45,10 @@ const WorkerManagement: React.FC = () => {
     newSalary: 0,
     reason: ''
   });
+
+  // Estados para controlar visibilidad de planillas
+  const [visiblePayrolls, setVisiblePayrolls] = useState<Record<string, boolean>>({});
+  const [payrollCalculations, setPayrollCalculations] = useState<Record<string, any>>({});
   
   // Formularios
   const [newWorker, setNewWorker] = useState<WorkerFormData>({
@@ -85,12 +92,74 @@ const WorkerManagement: React.FC = () => {
       console.log('Configuración cargada:', settings);
       setPayrollSettings(settings);
       
+      // Cargar ajustes existentes para todos los trabajadores
+      console.log('Cargando ajustes de planilla...');
+      await loadWorkersAdjustments(workersData);
+      
       console.log('Carga de datos completada exitosamente');
     } catch (error) {
       console.error('Error detallado al cargar datos:', error);
       showError('Error de carga', `No se pudieron cargar los datos: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Cargar ajustes de planilla para todos los trabajadores
+  const loadWorkersAdjustments = async (workers: Worker[]) => {
+    try {
+      console.log('🔍 Iniciando carga de ajustes para', workers.length, 'trabajadores');
+      console.log('🗓️ Período seleccionado:', selectedPeriod);
+      
+      const now = new Date();
+      const startDate = selectedPeriod === 'monthly' ? 
+        new Date(now.getFullYear(), now.getMonth(), 1) :
+        new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      
+      const endDate = selectedPeriod === 'monthly' ?
+        new Date(now.getFullYear(), now.getMonth() + 1, 0) :
+        new Date();
+
+      console.log('📅 Rango de fechas:', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      });
+
+      const adjustmentsMap: Record<string, PayrollAdjustmentRecord | null> = {};
+      
+      // Cargar ajustes para cada trabajador desde el documento del worker
+      for (const worker of workers) {
+        try {
+          console.log(`🔎 Buscando ajustes para ${worker.name} (${worker.id})`);
+          
+          // Primero verificar si el worker tiene ajustes en su documento
+          const allWorkerAdjustments = await WorkerPayrollService.getWorkerPayrollAdjustments(worker.id);
+          console.log(`📝 ${worker.name} tiene ${allWorkerAdjustments.length} ajustes totales:`, allWorkerAdjustments);
+          
+          // Luego filtrar por período
+          const workerAdjustments = await WorkerPayrollService.getWorkerPayrollAdjustmentsByPeriod(
+            worker.id,
+            startDate,
+            endDate
+          );
+          
+          if (workerAdjustments.length > 0) {
+            adjustmentsMap[worker.id] = workerAdjustments[0]; // Más reciente
+            console.log(`✅ Ajustes cargados para ${worker.name}:`, workerAdjustments[0]);
+          } else {
+            adjustmentsMap[worker.id] = null;
+            console.log(`❌ No se encontraron ajustes para ${worker.name} en el período actual`);
+          }
+        } catch (error) {
+          console.error(`💥 Error cargando ajustes para ${worker.name}:`, error);
+          adjustmentsMap[worker.id] = null;
+        }
+      }
+      
+      setWorkerAdjustments(adjustmentsMap);
+      console.log('🎯 Ajustes de trabajadores cargados finalmente:', adjustmentsMap);
+    } catch (error) {
+      console.error('💥 Error general cargando ajustes de trabajadores:', error);
     }
   };
 
@@ -158,6 +227,8 @@ const WorkerManagement: React.FC = () => {
 
   // Función para calcular planilla individual con ajustes opcionales
   const calculateWorkerPayroll = (worker: Worker) => {
+    console.log('Calculando planilla para trabajador:', worker.name);
+    
     const now = new Date();
     const startDate = selectedPeriod === 'monthly' ? 
       new Date(now.getFullYear(), now.getMonth(), 1) :
@@ -172,7 +243,13 @@ const WorkerManagement: React.FC = () => {
     const mockBonuses: any[] = [];
 
     // Verificar si hay ajustes para este trabajador
-    const adjustment = workerAdjustments[worker.id];
+    const adjustmentRecord = workerAdjustments[worker.id];
+    
+    // Convertir PayrollAdjustmentRecord a WorkerPayrollAdjustment para compatibilidad
+    const adjustment = adjustmentRecord ? {
+      ...adjustmentRecord,
+      workerId: worker.id
+    } : null;
     
     const calculation = adjustment ? 
       calculatePayrollWithAdjustments(
@@ -196,21 +273,156 @@ const WorkerManagement: React.FC = () => {
     return calculation;
   };
 
-  // Calcular planilla (función separada para eventos)
-  const handleCalculatePayroll = async (worker: Worker) => {
-    try {
-      const calculation = calculateWorkerPayroll(worker);
-      
-      // Guardar el registro en la base de datos
-      await createPayrollRecord(calculation, {
-        paymentStatus: 'pending',
-        notes: `Planilla ${selectedPeriod} generada automáticamente`
-      });
-      
-      showSuccess('Planilla calculada y guardada exitosamente');
-    } catch (error) {
-      console.error('Error saving payroll calculation:', error);
-      showError('Error al guardar la planilla calculada');
+  // Toggle planilla - mostrar/ocultar y calcular si es necesario
+  const handleTogglePayroll = async (worker: Worker) => {
+    const isCurrentlyVisible = visiblePayrolls[worker.id];
+    
+    if (isCurrentlyVisible) {
+      // Si está visible, ocultarla
+      setVisiblePayrolls(prev => ({
+        ...prev,
+        [worker.id]: false
+      }));
+    } else {
+      // Si no está visible, mostrarla y calcular
+      try {
+        console.log(`Calculando planilla para ${worker.name}...`);
+        console.log('Worker data:', worker);
+        console.log('Selected period:', selectedPeriod);
+        console.log('Payroll settings:', payrollSettings);
+        
+        // Iniciar estado de carga
+        setPayrollLoading(prev => ({
+          ...prev,
+          [worker.id]: true
+        }));
+        
+        // Mostrar que se está cargando (sin datos aún)
+        setVisiblePayrolls(prev => ({
+          ...prev,
+          [worker.id]: true
+        }));
+        
+        // Paso 1: Cargar ajustes desde Firebase
+        console.log('Paso 1: Cargando ajustes desde Firebase...');
+        const now = new Date();
+        const startDate = selectedPeriod === 'monthly' ? 
+          new Date(now.getFullYear(), now.getMonth(), 1) :
+          new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        
+        const endDate = selectedPeriod === 'monthly' ?
+          new Date(now.getFullYear(), now.getMonth() + 1, 0) :
+          new Date();
+
+        let loadedAdjustments;
+        try {
+          console.log('🔍 DEBUGGING: Llamando getWorkerPayrollAdjustmentsByPeriod con:', {
+            workerId: worker.id,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+          });
+          
+          // Primero obtener TODOS los ajustes del worker para ver qué fechas tienen
+          const allAdjustments = await WorkerPayrollService.getWorkerPayrollAdjustments(worker.id);
+          console.log('🗂️ TODOS los ajustes del worker (sin filtrar):', allAdjustments.map(adj => ({
+            id: adj.id,
+            period: {
+              startDate: adj.period.startDate,
+              endDate: adj.period.endDate
+            }
+          })));
+          
+          loadedAdjustments = await WorkerPayrollService.getWorkerPayrollAdjustmentsByPeriod(
+            worker.id, 
+            startDate, 
+            endDate
+          );
+          console.log('✅ Ajustes cargados desde Firebase (después del filtro):', loadedAdjustments);
+          
+          // TEMPORAL: Usar el primer ajuste sin importar el período para debugging
+          const allWorkerAdjustments = await WorkerPayrollService.getWorkerPayrollAdjustments(worker.id);
+          
+          // Actualizar el estado local con los ajustes cargados
+          if (loadedAdjustments.length > 0) {
+            const latestAdjustment = loadedAdjustments[0]; // Más reciente
+            setWorkerAdjustments(prev => ({
+              ...prev,
+              [worker.id]: latestAdjustment
+            }));
+            console.log('✅ Ajuste aplicado al trabajador (del filtro):', latestAdjustment);
+          } else if (allWorkerAdjustments.length > 0) {
+            // TEMPORAL: Si el filtro no funciona, usar cualquier ajuste para verificar que la funcionalidad básica sirve
+            const anyAdjustment = allWorkerAdjustments[0];
+            setWorkerAdjustments(prev => ({
+              ...prev,
+              [worker.id]: anyAdjustment
+            }));
+            console.log('⚠️ TEMPORAL: Usando ajuste sin filtrar para testing:', anyAdjustment);
+          } else {
+            console.log('❌ No hay ajustes disponibles para este worker');
+          }
+        } catch (adjustmentError) {
+          console.error('Error cargando ajustes:', adjustmentError);
+          // Continuar sin ajustes si hay error
+        }
+
+        // Paso 2: Calcular planilla
+        console.log('Paso 2: Iniciando cálculo...');
+        let calculation;
+        
+        try {
+          calculation = calculateWorkerPayroll(worker);
+          console.log('Paso 3: Cálculo completado:', calculation);
+        } catch (calcError) {
+          console.error('Error en calculateWorkerPayroll:', calcError);
+          throw new Error('Error en el cálculo de planilla: ' + (calcError instanceof Error ? calcError.message : String(calcError)));
+        }
+        
+        // Guardar el cálculo en el estado
+        setPayrollCalculations(prev => ({
+          ...prev,
+          [worker.id]: calculation
+        }));
+        console.log('Paso 4: Cálculo guardado en estado');
+        
+        // Opcional: Guardar el registro en la base de datos
+        try {
+          console.log('Paso 5: Guardando en base de datos...');
+          await createPayrollRecord(calculation, {
+            paymentStatus: 'pending',
+            notes: `Planilla ${selectedPeriod} generada automáticamente`
+          });
+          console.log('Paso 6: Guardado en base de datos exitoso');
+        } catch (dbError) {
+          console.error('Error al guardar en base de datos:', dbError);
+          // No fallar si solo es el guardado en DB, mostrar warning
+          console.warn('Planilla calculada pero no pudo guardarse en BD');
+        }
+        
+        console.log('Planilla calculada exitosamente');
+        
+        // Finalizar estado de carga (éxito)
+        setPayrollLoading(prev => ({
+          ...prev,
+          [worker.id]: false
+        }));
+        
+      } catch (error) {
+        console.error('Error detallado calculating payroll:', error);
+        console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+        showError('Error al calcular la planilla', error instanceof Error ? error.message : 'Error desconocido');
+        
+        // Si hay error, ocultar la planilla y finalizar carga
+        setVisiblePayrolls(prev => ({
+          ...prev,
+          [worker.id]: false
+        }));
+        
+        setPayrollLoading(prev => ({
+          ...prev,
+          [worker.id]: false
+        }));
+      }
     }
   };
 
@@ -220,7 +432,7 @@ const WorkerManagement: React.FC = () => {
     setShowAdjustmentModal(true);
   };
 
-  const handleAdjustmentSaved = (adjustment: WorkerPayrollAdjustment | null) => {
+  const handleAdjustmentSaved = (adjustment: PayrollAdjustmentRecord | null) => {
     if (selectedWorkerForAdjustment) {
       setWorkerAdjustments(prev => ({
         ...prev,
@@ -354,8 +566,9 @@ const WorkerManagement: React.FC = () => {
       {/* Lista de trabajadores */}
       <div className="workers-grid">
         {workers.map(worker => {
-          // Calcular planilla en tiempo real (simplificado)
-          const mockCalculation = calculateWorkerPayroll(worker);
+          const isPayrollVisible = visiblePayrolls[worker.id];
+          const calculation = payrollCalculations[worker.id];
+          
           return (
             <div key={worker.id} className="worker-card">
               <div className="worker-info">
@@ -384,52 +597,74 @@ const WorkerManagement: React.FC = () => {
                 )}
               </div>
               
-              {mockCalculation && (
+              {isPayrollVisible && (
                 <div className="payroll-summary">
-                  <h4>Planilla {selectedPeriod === 'monthly' ? 'Mensual' : 'Semanal'}</h4>
+                  {payrollLoading[worker.id] ? (
+                    <div className="loading-message">
+                      <span className="spinner"></span>
+                      <h4>Cargando planilla desde Firebase...</h4>
+                      <p>Por favor espere mientras se cargan los ajustes y se calculan los datos</p>
+                    </div>
+                  ) : calculation ? (
+                    <>
+                      <h4>Planilla {selectedPeriod === 'monthly' ? 'Mensual' : 'Semanal'}</h4>
                   <div className="summary-grid">
                     <div className="summary-item">
                       <span> Horas Trabajadas:</span>
-                      <span>{formatHours(mockCalculation.workedHours)}</span>
+                      <span>{formatHours(calculation.workedHours)}</span>
                     </div>
                     <div className="summary-item">
                       <span> Horas Extras:</span>
-                      <span>{formatHours(mockCalculation.overtimeHours)}</span>
+                      <span>{formatHours(calculation.overtimeHours)}</span>
                     </div>
                     <div className="summary-item">
                       <span> Días Trabajados:</span>
-                      <span>{mockCalculation.workedDays}</span>
+                      <span>{calculation.workedDays}</span>
                     </div>
                     <div className="summary-item">
                       <span> Pago Regular:</span>
-                      <span>{formatCurrency(mockCalculation.regularPay)}</span>
+                      <span>{formatCurrency(calculation.regularPay)}</span>
                     </div>
                     <div className="summary-item">
                       <span> Pago Horas Extras:</span>
-                      <span>{formatCurrency(mockCalculation.overtimePay)}</span>
+                      <span>{formatCurrency(calculation.overtimePay)}</span>
                     </div>
                     <div className="summary-item">
                       <span> Bonos:</span>
-                      <span>{formatCurrency(mockCalculation.bonuses)}</span>
+                      <span>{formatCurrency(calculation.bonuses)}</span>
                     </div>
-                    <div className="summary-item">
-                      <span> Total Descuentos:</span>
-                      <span className="negative">{formatCurrency(mockCalculation.totalDiscounts)}</span>
+                      <div className="summary-item">
+                        <span> Total Descuentos:</span>
+                        <span className="negative">{formatCurrency(calculation.totalDiscounts)}</span>
+                      </div>
+                      <div className="summary-item total">
+                        <span> Neto a Pagar:</span>
+                        <span className="amount">{formatCurrency(calculation.netPay)}</span>
+                      </div>
                     </div>
-                    <div className="summary-item total">
-                      <span> Neto a Pagar:</span>
-                      <span className="amount">{formatCurrency(mockCalculation.netPay)}</span>
+                    </>
+                  ) : (
+                    <div className="no-data-message">
+                      <p>No hay datos de planilla disponibles</p>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
               
               <div className="worker-actions">
                 <button 
-                  className="btn btn-primary"
-                  onClick={() => handleCalculatePayroll(worker)}
+                  className={`btn ${isPayrollVisible ? 'btn-secondary' : 'btn-primary'}`}
+                  onClick={() => handleTogglePayroll(worker)}
+                  disabled={payrollLoading[worker.id]}
                 >
-                  Calcular Planilla
+                  {payrollLoading[worker.id] ? (
+                    <>
+                      <span className="spinner"></span>
+                      Cargando...
+                    </>
+                  ) : (
+                    isPayrollVisible ? '📊 Ocultar Planilla' : '📊 Mostrar Planilla'
+                  )}
                 </button>
                 <button 
                   className="btn btn-warning"

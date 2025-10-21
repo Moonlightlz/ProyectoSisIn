@@ -12,10 +12,37 @@ export interface Worker {
     adjustedBy: string;
     adjustedAt: Date;
   };
+  // Ajustes de planilla integrados en el documento del trabajador
+  payrollAdjustments?: PayrollAdjustmentRecord[];
   hireDate: Date;
   status: 'active' | 'inactive';
   createdAt: Date;
   updatedAt?: Date;
+}
+
+// Registro de ajuste de planilla dentro del documento del trabajador
+export interface PayrollAdjustmentRecord {
+  id: string;
+  period: {
+    startDate: Date;
+    endDate: Date;
+    type: 'weekly' | 'monthly';
+  };
+  // Ajustes manuales
+  manualBonuses?: number | undefined;
+  manualDeductions?: number | undefined;
+  customHours?: number | undefined;
+  customDays?: number | undefined;
+  overrideInvalidInsurance?: number | undefined;
+  overridePensionFund?: number | undefined;
+  overrideEssaludDeduction?: number | undefined;
+  // Notas y justificación
+  adjustmentNotes?: string | undefined;
+  adjustmentReason?: string | undefined;
+  // Campos de auditoría
+  createdBy: string;
+  createdAt: Date;
+  updatedAt?: Date | undefined;
 }
 
 // Registro de asistencia diaria
@@ -48,7 +75,8 @@ export interface Bonus {
   createdAt: Date;
 }
 
-// Ajustes personalizados de planilla por trabajador
+// @deprecated - Use PayrollAdjustmentRecord within Worker document instead
+// Ajustes personalizados de planilla por trabajador (LEGACY)
 export interface WorkerPayrollAdjustment {
   id: string;
   workerId: string;

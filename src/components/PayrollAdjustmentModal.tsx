@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Worker, WorkerPayrollAdjustment, PayrollCalculation } from '../types/payroll';
-import { 
-  createPayrollAdjustment, 
-  updatePayrollAdjustment,
-  getPayrollAdjustmentsByWorkerAndPeriod 
-} from '../services/payrollAdjustmentService';
+import { Worker, PayrollAdjustmentRecord, PayrollCalculation } from '../types/payroll';
+import WorkerPayrollService from '../services/workerPayrollService';
 import { useAuth } from '../contexts/AuthContext';
 import './PayrollAdjustmentModal.css';
 
@@ -13,7 +9,7 @@ interface PayrollAdjustmentModalProps {
   onClose: () => void;
   worker: Worker;
   baseCalculation: PayrollCalculation;
-  onAdjustmentSaved: (adjustment: WorkerPayrollAdjustment | null) => void;
+  onAdjustmentSaved: (adjustment: PayrollAdjustmentRecord | null) => void;
 }
 
 const PayrollAdjustmentModal: React.FC<PayrollAdjustmentModalProps> = ({
@@ -24,7 +20,7 @@ const PayrollAdjustmentModal: React.FC<PayrollAdjustmentModalProps> = ({
   onAdjustmentSaved
 }) => {
   const { currentUser } = useAuth();
-  const [existingAdjustment, setExistingAdjustment] = useState<WorkerPayrollAdjustment | null>(null);
+  const [existingAdjustment, setExistingAdjustment] = useState<PayrollAdjustmentRecord | null>(null);
   const [formData, setFormData] = useState({
     manualBonuses: 0,
     manualDeductions: 0,
@@ -48,7 +44,7 @@ const PayrollAdjustmentModal: React.FC<PayrollAdjustmentModalProps> = ({
   const loadExistingAdjustment = async () => {
     try {
       setLoading(true);
-      const adjustments = await getPayrollAdjustmentsByWorkerAndPeriod(
+      const adjustments = await WorkerPayrollService.getWorkerPayrollAdjustmentsByPeriod(
         worker.id,
         baseCalculation.period.startDate,
         baseCalculation.period.endDate
@@ -108,7 +104,6 @@ const PayrollAdjustmentModal: React.FC<PayrollAdjustmentModalProps> = ({
       setError(null);
 
       const adjustmentData = {
-        workerId: worker.id,
         period: baseCalculation.period,
         ...(formData.manualBonuses && { manualBonuses: formData.manualBonuses }),
         ...(formData.manualDeductions && { manualDeductions: formData.manualDeductions }),
@@ -122,13 +117,18 @@ const PayrollAdjustmentModal: React.FC<PayrollAdjustmentModalProps> = ({
         createdBy: currentUser.email || currentUser.uid
       };
 
-      let savedAdjustment: WorkerPayrollAdjustment;
+      let savedAdjustment: PayrollAdjustmentRecord;
 
       if (existingAdjustment) {
-        await updatePayrollAdjustment(existingAdjustment.id, adjustmentData);
-        savedAdjustment = { ...existingAdjustment, ...adjustmentData };
+        await WorkerPayrollService.updatePayrollAdjustment(worker.id, existingAdjustment.id, adjustmentData);
+        savedAdjustment = { ...existingAdjustment, ...adjustmentData, updatedAt: new Date() };
       } else {
-        savedAdjustment = await createPayrollAdjustment(adjustmentData);
+        const adjustmentId = await WorkerPayrollService.addPayrollAdjustment(worker.id, adjustmentData);
+        savedAdjustment = { 
+          id: adjustmentId, 
+          ...adjustmentData, 
+          createdAt: new Date() 
+        };
       }
 
       onAdjustmentSaved(savedAdjustment);

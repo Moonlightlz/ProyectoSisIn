@@ -5,7 +5,7 @@ import {
   OvertimeRecord, 
   PayrollCalculation, 
   PayrollSettings,
-  WorkerPayrollAdjustment
+  PayrollAdjustmentRecord
 } from '../types/payroll';
 
 // Configuración por defecto
@@ -295,7 +295,7 @@ export const calculatePayrollWithAdjustments = (
   overtimeRecords: OvertimeRecord[],
   period: { startDate: Date; endDate: Date; type: 'weekly' | 'monthly' },
   settings: PayrollSettings = DEFAULT_PAYROLL_SETTINGS,
-  adjustment?: WorkerPayrollAdjustment
+  adjustment?: PayrollAdjustmentRecord
 ): PayrollCalculation => {
   
   // Cálculo base
