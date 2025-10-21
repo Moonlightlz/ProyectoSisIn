@@ -1,0 +1,303 @@
+.payroll-history-modal {
+  max-width: 1200px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.record-details-modal {
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.history-content {
+  padding: 1rem;
+}
+
+.history-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: white;
+  border-radius: 4px;
+  border-left: 3px solid #4CAF50;
+}
+
+.summary-item span:first-child {
+  font-weight: 500;
+  color: #666;
+}
+
+.summary-item span:last-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.history-table {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.history-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.history-table th {
+  background-color: #f8f9fa;
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e9ecef;
+  font-size: 0.9rem;
+}
+
+.history-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 0.9rem;
+}
+
+.history-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.history-table tr.status-paid {
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.history-table tr.status-pending {
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+.history-table tr.status-cancelled {
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.period-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.period-subtitle {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.amount {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.negative {
+  font-weight: 600;
+  color: #dc3545;
+}
+
+.net-pay {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+  min-width: 70px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #138496;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.no-records {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+.no-records p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Estilos para el modal de detalles */
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.detail-section {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid #e9ecef;
+}
+
+.detail-section h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 2px solid #4CAF50;
+  padding-bottom: 0.5rem;
+}
+
+.detail-section.highlight {
+  background-color: #e8f5e8;
+  border-color: #4CAF50;
+}
+
+.detail-section.warning {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+}
+
+.detail-section.warning h4 {
+  border-bottom-color: #ffc107;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item span:first-child {
+  font-weight: 500;
+  color: #666;
+}
+
+.detail-item span:last-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-item.strong span:last-child {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.detail-item.large span:last-child {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.detail-item.negative span:last-child {
+  color: #dc3545;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-style: italic;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #f5c6cb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .payroll-history-modal,
+  .record-details-modal {
+    max-width: 95%;
+    margin: 1rem;
+  }
+  
+  .history-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .history-table {
+    font-size: 0.8rem;
+  }
+  
+  .history-table th,
+  .history-table td {
+    padding: 8px 4px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .btn-sm {
+    margin-bottom: 2px;
+  }
+}

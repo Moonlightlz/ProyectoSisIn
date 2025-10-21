@@ -19,6 +19,7 @@ export const debugCurrentUser = async () => {
       const userData = userDoc.data();
       console.log('User Data from Firestore:', userData);
       console.log('User Role:', userData.role);
+      console.log('User Role:', userData.role);
       console.log('User Permissions:', userData.permissions);
     } else {
       console.log('No document found for user in Firestore');
@@ -49,4 +50,6 @@ export const debugCurrentUser = async () => {
 };
 
 // Ejecutar automáticamente al cargar
+// Función rápida para verificar rol en consola
+window.checkUserRole = debugCurrentUser;
 window.debugCurrentUser = debugCurrentUser;
