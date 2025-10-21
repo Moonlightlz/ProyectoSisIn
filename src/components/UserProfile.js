@@ -12,7 +12,7 @@ const userData = {
   profilePicture: 'https://i.pravatar.cc/150?u=a042581f4e29026704d' // Un avatar de ejemplo
 };
 
-function UserProfile({ onLogout }) { // Recibe onLogout como prop
+function UserProfile({ onLogout }) {
   return (
     <div className="profile-page-container">
       <div className="profile-card">
@@ -51,7 +51,8 @@ function UserProfile({ onLogout }) { // Recibe onLogout como prop
         </div>
 
         <div className="profile-actions">
-          <button className="action-button primary" onClick={onLogout}>Cerrar Sesión</button> {/* Botón para cerrar sesión */}
+          {/* El botón para cerrar sesión vuelve a estar en el perfil */}
+          <button className="action-button primary" onClick={onLogout}>Cerrar Sesión</button>
           <button className="action-button secondary">Cambiar Contraseña</button>
         </div>
       </div>

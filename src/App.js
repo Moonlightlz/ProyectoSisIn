@@ -3,18 +3,27 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Componentes y Páginas
 import Login from './components/Login'; // Importamos el componente Login
-import UserProfile from './components/UserProfile';
-import HomePage from './components/HomePage';
-import AppLayout from './components/AppLayout';
+import UserProfile from './components/UserProfile'; // Importamos el perfil
+import HomePage from './components/HomePage'; // Importamos la página de inicio
+import CustomerRegistrationForm from './components/CustomerRegistrationForm'; // Importamos el formulario de clientes
+import CustomerListPage from './components/CustomerListPage'; // Importamos la nueva lista de clientes
+import AppLayout from './components/AppLayout'; // Importamos el layout principal
 
 import './App.css';
 
 function App() {
   // Estado para controlar si el usuario ha iniciado sesión
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true); // Lo dejamos en true para desarrollo
+  // Estado para almacenar la lista de clientes
+  const [customers, setCustomers] = useState([]);
 
   const handleLoginSuccess = () => {
     setIsLoggedIn(true);
+  };
+
+  // Función para añadir un nuevo cliente a la lista
+  const addCustomer = (customer) => {
+    setCustomers(prevCustomers => [...prevCustomers, { ...customer, id: Date.now() }]);
   };
 
   const handleLogout = () => {
@@ -33,9 +42,11 @@ function App() {
           element={
             isLoggedIn ? (
               <Routes>
-                <Route element={<AppLayout onLogout={handleLogout} />}>
+                <Route element={<AppLayout />}>
                   <Route index element={<HomePage />} />
-                  <Route path="profile" element={<UserProfile />} />
+                  <Route path="profile" element={<UserProfile onLogout={handleLogout} />} />
+                  <Route path="clientes" element={<CustomerListPage customers={customers} />} />
+                  <Route path="clientes/registrar" element={<CustomerRegistrationForm onAddCustomer={addCustomer} />} />
                 </Route>
               </Routes>
             ) : (

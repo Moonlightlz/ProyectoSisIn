@@ -1,0 +1,108 @@
+/* CustomerRegistrationForm.css */
+
+.registration-container {
+  /* El contenedor principal ahora es manejado por AppLayout, 
+     así que estos estilos se centran en el formulario en sí. */
+  font-family: 'Arial', sans-serif;
+  display: flex; /* Para centrar el formulario dentro del content-area */
+  justify-content: center;
+}
+
+.registration-form {
+  background-color: #ffffff;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px; /* Slightly wider than login form if needed */
+  text-align: center;
+  margin-top: 20px; /* Espacio desde la barra de navegación */
+}
+
+.registration-form h2 {
+  margin-bottom: 10px;
+  color: #333333;
+  font-size: 28px;
+}
+
+.registration-form .form-subtitle {
+  margin-bottom: 30px;
+  color: #666666;
+  font-size: 16px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555555;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="tel"] {
+  width: calc(100% - 20px); /* Account for padding */
+  padding: 12px 10px;
+  border: 1px solid #dddddd;
+  border-radius: 5px;
+  font-size: 16px;
+  color: #333333;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input[type="text"],
+.form-group input[type="tel"] {
+  box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="tel"]:focus {
+  border-color: #007bff; /* Blue focus border */
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 15px;
+  background-color: #28a745; /* Green for registration/success */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.submit-button:hover {
+  background-color: #218838; /* Darker green on hover */
+  transform: translateY(-2px);
+}
+
+.submit-button:active {
+  transform: translateY(0);
+}
+
+.error-message {
+  color: #dc3545; /* Red for errors */
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.success-message {
+  color: #28a745; /* Green for success */
+  margin-bottom: 15px;
+  font-size: 14px;
+}

@@ -1,15 +1,20 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import BottomNav from './BottomNav';
+import { NavLink, Outlet } from 'react-router-dom';
 import './AppLayout.css';
 
-function AppLayout({ onLogout }) {
+function AppLayout() {
   return (
-    <div className="app-layout">
-      <main className="app-content">
-        <Outlet /> {/* Aquí se renderiza la página actual */}
+    <div className="app-container">
+      <nav className="main-nav">
+        <div className="nav-links">
+          <NavLink to="/" end>Inicio</NavLink>
+          <NavLink to="/clientes">Clientes</NavLink>
+          <NavLink to="/profile">Perfil</NavLink>
+        </div>
+      </nav>
+      <main className="content-area">
+        <Outlet /> {/* Aquí se renderizarán las rutas hijas */}
       </main>
-      <BottomNav onLogout={onLogout} />
     </div>
   );
 }
