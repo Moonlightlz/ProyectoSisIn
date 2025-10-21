@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Worker, WorkerFormData, PayrollSettings, PayrollAdjustmentRecord, Bonus, PayrollCalculation } from '../types/payroll';
+import { Worker, WorkerFormData, PayrollSettings, PayrollAdjustmentRecord, Bonus } from '../types/payroll';
 import { calculatePayroll, calculatePayrollWithAdjustments, formatCurrency, formatHours, DEFAULT_PAYROLL_SETTINGS } from '../utils/payrollCalculations';
 import { workerService, payrollSettingsService } from '../services/workerService';
-import { createPayrollRecord } from '../services/payrollRecordService';
+
 import { salaryAdjustmentService } from '../services/salaryAdjustmentService';
 import WorkerPayrollService from '../services/workerPayrollService';
 import { BonusService } from '../services/bonusService';
@@ -465,68 +465,7 @@ const WorkerManagement: React.FC = () => {
     // Aquí podríamos refreschar la lista o hacer otras actualizaciones necesarias
   };
 
-  // DEBUG: Generar historial de 3 meses para testing
-  const handleGenerateDebugHistory = async (worker: Worker) => {
-    if (!window.confirm(`¿Generar historial de pagos de 3 meses para ${worker.name}? (Solo para debug)`)) {
-      return;
-    }
 
-    try {
-      console.log('🔧 DEBUG: Generando historial de 3 meses para:', worker.name);
-      console.log('🔧 DEBUG: Usuario actual:', currentUser);
-      console.log('🔧 DEBUG: Worker data:', worker);
-      
-      if (!currentUser) {
-        throw new Error('Usuario no autenticado');
-      }
-
-      const now = new Date();
-      const months = [
-        { name: 'Mes 1', date: new Date(now.getFullYear(), now.getMonth() - 2, 27) },
-        { name: 'Mes 2', date: new Date(now.getFullYear(), now.getMonth() - 1, 27) },
-        { name: 'Mes 3', date: new Date(now.getFullYear(), now.getMonth(), 27) }
-      ];
-
-      console.log('🔧 DEBUG: Meses a generar:', months);
-
-      for (const month of months) {
-        console.log(`🔧 DEBUG: Procesando ${month.name}...`);
-        
-        // Cargar bonos para el mes específico
-        const monthStart = new Date(month.date.getFullYear(), month.date.getMonth(), 1);
-        const monthEnd = new Date(month.date.getFullYear(), month.date.getMonth() + 1, 0);
-        const monthBonuses = await BonusService.getWorkerBonusesByPeriod(worker.id, monthStart, monthEnd);
-        console.log(`🔧 DEBUG: Bonos para ${month.name}:`, monthBonuses);
-        
-        // Calcular planilla para cada mes con bonos
-        const payrollData = calculateWorkerPayroll(worker, monthBonuses);
-        console.log('🔧 DEBUG: Datos de planilla calculados:', payrollData);
-        
-        // Crear registro usando la estructura PayrollCalculation correcta
-        const paymentRecord: PayrollCalculation = {
-          ...payrollData, // Ya contiene todos los campos necesarios
-          period: {
-            startDate: new Date(month.date.getFullYear(), month.date.getMonth(), 1),
-            endDate: new Date(month.date.getFullYear(), month.date.getMonth() + 1, 0),
-            type: 'monthly' as const
-          },
-          createdAt: month.date,
-          calculatedBy: currentUser.uid
-        };
-
-        console.log('🔧 DEBUG: Registro a crear:', paymentRecord);
-
-        await createPayrollRecord(paymentRecord);
-        console.log(`✅ Registro creado exitosamente para ${month.name}`);
-      }
-
-      alert(`Historial de 3 meses generado exitosamente para ${worker.name}`);
-    } catch (error) {
-      console.error('🚨 Error completo generando historial debug:', error);
-      console.error('🚨 Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
-      alert(`Error al generar historial de debug: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    }
-  };
 
   // Abrir modal de ajuste de sueldo
   const handleShowSalaryAdjustment = (worker: Worker) => {
@@ -744,14 +683,7 @@ const WorkerManagement: React.FC = () => {
                 >
                   💰 Agregar Bono
                 </button>
-                <button 
-                  className="btn btn-debug"
-                  onClick={() => handleGenerateDebugHistory(worker)}
-                  title="[DEBUG] Generar historial de 3 meses para testing"
-                  style={{ backgroundColor: '#ff6b6b', color: 'white', fontSize: '12px' }}
-                >
-                  🔧 Debug Historial
-                </button>
+
                 {workerAdjustments[worker.id] && (
                   <span className="adjustment-indicator" title="Este trabajador tiene ajustes manuales">
                     ⚙️ Ajustado
@@ -793,12 +725,21 @@ const WorkerManagement: React.FC = () => {
               </div>
               <div className="form-group">
                 <label>Cargo</label>
-                <input
-                  type="text"
+                <select
                   value={newWorker.position}
                   onChange={(e) => setNewWorker(prev => ({ ...prev, position: e.target.value }))}
-                  placeholder="Ej: Operario, Supervisor"
-                />
+                  required
+                >
+                  <option value="">Seleccionar cargo...</option>
+                  <option value="Corte de materiales">Corte de materiales</option>
+                  <option value="Costura">Costura</option>
+                  <option value="Montaje y sellado">Montaje y sellado</option>
+                  <option value="Acabado">Acabado</option>
+                  <option value="Pruebas de calidad">Pruebas de calidad</option>
+                  <option value="Empaquetado">Empaquetado</option>
+                  <option value="RRHH">RRHH</option>
+                  <option value="Supervisor">Supervisor</option>
+                </select>
               </div>
               <div className="form-group">
                 <label>Sueldo Base</label>
