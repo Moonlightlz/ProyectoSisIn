@@ -1,0 +1,10 @@
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-content {
+  flex-grow: 1;
+  padding-bottom: 60px; /* Espacio para la barra de navegación inferior */
+}
