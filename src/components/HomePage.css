@@ -1,11 +1,12 @@
 .dashboard-container {
   padding: 30px;
-  background-color: #f8fafc;
+  background-color: #f0f2f5; /* Un gris más suave para el fondo */
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
 }
 
 .dashboard-container h1 {
-  font-size: 2.2rem;
+  font-size: 2.5rem; /* Título más grande */
   color: #1e293b;
   margin-bottom: 20px;
   text-align: left;
@@ -15,21 +16,12 @@
   background-color: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 25px 30px;
-}
-
-.sale-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 15px;
-  margin-bottom: 25px;
+  padding: 0; /* Quitamos el padding para que el contenido interno lo maneje */
 }
 
 .sale-header h2 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.5rem; /* Ajustamos tamaño para el modal */
   color: #334155;
 }
 
@@ -39,6 +31,7 @@
   font-weight: 600;
   font-size: 0.9rem;
   color: #fff;
+  text-transform: uppercase; /* Texto en mayúsculas */
 }
 
 .status-entregado {
@@ -57,7 +50,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
-  margin-bottom: 30px;
+  padding: 25px 30px; /* Padding para la sección de info */
 }
 
 .info-card {
@@ -93,7 +86,7 @@
 }
 
 .products-section {
-  margin-bottom: 30px;
+  padding: 0 30px 30px 30px; /* Padding para la sección de productos */
 }
 
 .products-section h3 {
@@ -126,9 +119,11 @@
 }
 
 .sale-summary {
+  background-color: #f8fafc; /* Fondo ligeramente distinto */
+  padding: 25px 30px;
   border-top: 1px solid #e2e8f0;
-  padding-top: 20px;
-  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
 }
 
 .sale-summary h3 {
@@ -137,6 +132,7 @@
   margin-bottom: 15px;
   display: flex;
   align-items: center;
+  flex-basis: 100%; /* Ocupa toda la línea */
 }
 
 .summary-item {
@@ -145,6 +141,12 @@
   font-size: 1.1rem;
   padding: 8px 0;
   color: #475569;
+  flex-basis: 48%; /* Para que se dividan en dos columnas */
+}
+
+.sale-summary .summary-details {
+  display: flex;
+  flex-direction: column;
 }
 
 .summary-item.total {
@@ -152,4 +154,119 @@
   font-weight: bold;
   color: #1e293b;
   margin-top: 10px;
+}
+
+/* --- Nuevos Estilos para la Tabla de Ventas --- */
+
+.sales-list {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07);
+  overflow: hidden; /* Para que el border-radius afecte a la tabla */
+}
+
+.sales-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sales-table th, .sales-table td {
+  padding: 18px 22px;
+  text-align: left;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.sales-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sales-table tbody tr {
+  transition: background-color 0.2s ease-in-out;
+}
+
+.sales-table tbody tr:hover {
+  background-color: #f1f5f9; /* Color de fondo al pasar el ratón */
+}
+
+.sales-table td {
+  color: #334155;
+  font-weight: 500;
+}
+
+.view-details-btn {
+  background-color: #3b82f6; /* Azul primario */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.view-details-btn:hover {
+  background-color: #2563eb; /* Azul más oscuro */
+  transform: translateY(-2px);
+}
+
+/* --- Estilos para la Vista de Detalles Integrada --- */
+
+.sale-details-container {
+  margin-top: 30px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: fadeInDetails 0.5s ease-out;
+}
+
+.sale-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* Espacio entre el título y la etiqueta de estado */
+}
+
+.close-details-btn {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  font-weight: 300;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.close-details-btn:hover {
+  color: #1e293b;
+  transform: scale(1.1);
+}
+
+/* Animación para la aparición de los detalles */
+@keyframes fadeInDetails {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
