@@ -70,3 +70,76 @@
   font-size: 14px;
   width: 200px;
 }
+
+/* Estilos para la tabla de asistencia */
+.attendance-table-container {
+  margin-top: 20px;
+  overflow-x: auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px; /* Para asegurar que la tabla no se comprima demasiado */
+}
+
+.attendance-table th,
+.attendance-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.attendance-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.attendance-table tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+.attendance-table td {
+  color: #333;
+  font-size: 14px;
+}
+
+.attendance-table td:last-child {
+  font-weight: 600;
+}
+
+/* Estilos para la fila de ausentes */
+.attendance-table tbody tr.absent-row {
+  background-color: #fff5f5;
+  color: #a5a5a5;
+}
+
+.attendance-table tbody tr.absent-row:hover {
+  background-color: #ffebeb;
+}
+
+.attendance-table tbody tr.absent-row td {
+  color: #999;
+}
+
+/* Estilos para la columna de Faltas */
+.absences-count {
+  text-align: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.absences-count.present {
+  color: #28a745; /* Verde */
+}
+
+.absences-count.absent {
+  color: #dc3545; /* Rojo */
+}
