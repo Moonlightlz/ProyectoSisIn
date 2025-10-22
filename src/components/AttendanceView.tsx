@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { attendanceService } from '../services/workerService';
 import { Worker } from '../types/payroll';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaHistory, FaFileExport } from 'react-icons/fa';
 import './AttendanceModal.css';
 
 interface AttendanceRecord {
@@ -99,6 +99,15 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           <h1>Registros de Asistencia</h1>
         </div>
         <div className="header-actions">
+          <button className="btn btn-secondary">
+            <FaEdit /> Editar
+          </button>
+          <button className="btn btn-secondary">
+            <FaHistory /> Historial
+          </button>
+          <button className="btn btn-secondary">
+            <FaFileExport /> Exportar
+          </button>
           <input
             type="text"
             placeholder="Buscar por DNI..."
