@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { attendanceService } from '../services/workerService';
 import { Worker } from '../types/payroll';
-import { FaArrowLeft, FaEdit, FaHistory, FaFileExport } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaHistory, FaFileExport, FaTrash } from 'react-icons/fa';
 import './AttendanceModal.css';
 
 interface AttendanceRecord {
@@ -33,6 +33,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
+  const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
 
   const fetchAttendance = async (date: string) => {
     setLoading(true);
@@ -123,6 +124,51 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
     return `${day}/${month}/${year}`;
   };
 
+  const handleSelectWorker = (workerId: string) => {
+    setSelectedWorkers(prev =>
+      prev.includes(workerId)
+        ? prev.filter(id => id !== workerId)
+        : [...prev, workerId]
+    );
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedWorkers(filteredWorkers.map(w => w.id));
+    } else {
+      setSelectedWorkers([]);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedWorkers.length === 0) return;
+
+    const confirmation = window.confirm(`¿Estás seguro que deseas eliminar los registros de asistencia de ${selectedWorkers.length} trabajador(es) para el día ${formattedSelectedDate()}? Esta acción no se puede deshacer.`);
+
+    if (confirmation) {
+      setLoading(true);
+      try {
+        const recordIdsToDelete: string[] = [];
+        selectedWorkers.forEach(workerId => {
+          const workerAttendance = attendanceData[workerId];
+          if (workerAttendance) {
+            workerAttendance.records.forEach(record => {
+              recordIdsToDelete.push(record.id);
+            });
+          }
+        });
+
+        await attendanceService.deleteAttendanceRecords(recordIdsToDelete);
+        await fetchAttendance(selectedDate); // Recargar datos
+        setSelectedWorkers([]); // Limpiar selección
+      } catch (err) {
+        setError('Error al eliminar los registros.');
+        console.error(err);
+      }
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="attendance-view">
       <div className="header">
@@ -141,6 +187,13 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           </button>
           <button className="btn btn-secondary">
             <FaFileExport /> Exportar
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={handleDeleteSelected}
+            disabled={selectedWorkers.length === 0 || loading}
+          >
+            <FaTrash /> Eliminar ({selectedWorkers.length})
           </button>
           <input
             type="text"
@@ -168,6 +221,13 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
         <table className="attendance-table">
           <thead>
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  onChange={handleSelectAll}
+                  checked={filteredWorkers.length > 0 && selectedWorkers.length === filteredWorkers.length}
+                />
+              </th>
               <th>Empleado</th>
               <th>DNI</th>
               <th>Fecha</th>
@@ -180,12 +240,20 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
             </tr>
           </thead>
           <tbody>
-            {filteredWorkers.map(worker => {
+            {filteredWorkers.map((worker) => {
               const workerAttendance = attendanceData[worker.id];
               const isAbsent = !workerAttendance;
 
               return (
                 <tr key={worker.id} className={isAbsent ? 'absent-row' : ''}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedWorkers.includes(worker.id)}
+                      onChange={() => handleSelectWorker(worker.id)}
+                      disabled={isAbsent}
+                    />
+                  </td>
                   <td>{worker.name}</td>
                   <td>{worker.dni}</td>
                   <td>{formattedSelectedDate()}</td>

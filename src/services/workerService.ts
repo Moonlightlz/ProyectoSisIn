@@ -10,7 +10,8 @@ import {
   query, 
   where, 
   orderBy,
-  Timestamp 
+  Timestamp,
+  writeBatch 
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Worker, WorkerFormData, AttendanceRecord, Bonus, PayrollSettings } from '../types/payroll';
@@ -219,6 +220,23 @@ export const attendanceService = {
     } catch (error) {
       console.error('Error fetching attendance for day:', error);
       throw new Error('No se pudieron cargar los registros de asistencia del día');
+    }
+  },
+
+  // Eliminar múltiples registros de asistencia por sus IDs
+  async deleteAttendanceRecords(recordIds: string[]): Promise<void> {
+    if (recordIds.length === 0) return;
+    try {
+      const batch = writeBatch(db);
+      recordIds.forEach(id => {
+        const docRef = doc(db, ATTENDANCE_COLLECTION, id);
+        batch.delete(docRef);
+      });
+      await batch.commit();
+      console.log(`${recordIds.length} registros de asistencia eliminados.`);
+    } catch (error) {
+      console.error('Error al eliminar registros de asistencia:', error);
+      throw new Error('No se pudieron eliminar los registros de asistencia');
     }
   },
 
