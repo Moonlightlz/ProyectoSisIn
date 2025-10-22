@@ -1,0 +1,10 @@
+# Local data and secrets
+data/
+node_modules/
+.env
+serviceAccountKey.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

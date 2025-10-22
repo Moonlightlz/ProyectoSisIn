@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './AppLayout.css';
+import AssistantWidget from './AssistantWidget';
 
 function AppLayout({ onLogout }) {
   const { userRole, currentUser } = useAuth();
@@ -39,6 +40,8 @@ function AppLayout({ onLogout }) {
       <main className="content-area">
         <Outlet /> {/* Aquí se renderizarán las rutas hijas */}
       </main>
+      {/* Asistente flotante global */}
+      <AssistantWidget />
     </div>
   );
 }

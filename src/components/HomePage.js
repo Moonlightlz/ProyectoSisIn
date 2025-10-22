@@ -216,6 +216,7 @@ function HomePage() {
     }
   };
 
+
   // Renderizar vista actual
   const renderCurrentView = () => {
     switch (currentView) {
@@ -275,6 +276,7 @@ function HomePage() {
 
             {/* Estadísticas resumidas */}
             <SalesStats sales={sales} />
+
             
             {sales.length > 0 ? (
               <>
