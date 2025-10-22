@@ -3,6 +3,8 @@ import { attendanceService } from '../services/workerService';
 import { Worker } from '../types/payroll';
 import { FaArrowLeft, FaEdit, FaHistory, FaFileExport, FaTrash } from 'react-icons/fa';
 import './AttendanceModal.css';
+import Modal from './Modal'; // Importar el componente Modal
+import { useModal } from '../hooks/useModal'; // Importar el hook para modales
 
 interface AttendanceRecord {
   id: string;
@@ -34,6 +36,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
+  const { modalState, hideModal, showConfirm } = useModal();
 
   const fetchAttendance = async (date: string) => {
     setLoading(true);
@@ -143,30 +146,38 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleDeleteSelected = async () => {
     if (selectedWorkers.length === 0) return;
 
-    const confirmation = window.confirm(`¿Estás seguro que deseas eliminar los registros de asistencia de ${selectedWorkers.length} trabajador(es) para el día ${formattedSelectedDate()}? Esta acción no se puede deshacer.`);
+    showConfirm(
+      'Confirmar Eliminación',
+      `¿Estás seguro que deseas eliminar los registros de asistencia de ${selectedWorkers.length} trabajador(es) para el día ${formattedSelectedDate()}? Esta acción no se puede deshacer.`,
+      async () => {
+        setLoading(true);
+        try {
+          const recordIdsToDelete: string[] = [];
+          selectedWorkers.forEach(workerId => {
+            const workerAttendance = attendanceData[workerId];
+            if (workerAttendance) {
+              workerAttendance.records.forEach(record => {
+                recordIdsToDelete.push(record.id);
+              });
+            }
+          });
 
-    if (confirmation) {
-      setLoading(true);
-      try {
-        const recordIdsToDelete: string[] = [];
-        selectedWorkers.forEach(workerId => {
-          const workerAttendance = attendanceData[workerId];
-          if (workerAttendance) {
-            workerAttendance.records.forEach(record => {
-              recordIdsToDelete.push(record.id);
-            });
-          }
-        });
-
-        await attendanceService.deleteAttendanceRecords(recordIdsToDelete);
-        await fetchAttendance(selectedDate); // Recargar datos
-        setSelectedWorkers([]); // Limpiar selección
-      } catch (err) {
-        setError('Error al eliminar los registros.');
-        console.error(err);
+          await attendanceService.deleteAttendanceRecords(recordIdsToDelete);
+          await fetchAttendance(selectedDate); // Recargar datos
+          setSelectedWorkers([]); // Limpiar selección
+        } catch (err) {
+          setError('Error al eliminar los registros.');
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      },
+      {
+        confirmText: 'Sí, eliminar',
+        cancelText: 'Cancelar',
+        type: 'danger'
       }
-      setLoading(false);
-    }
+    );
   };
 
   return (
@@ -212,6 +223,18 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           />
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      <Modal
+        isOpen={modalState.isOpen}
+        onClose={hideModal}
+        onConfirm={modalState.onConfirm}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+      />
 
       {loading && <div className="loading">Cargando asistencias...</div>}
       {error && <div className="error-message">{error}</div>}
