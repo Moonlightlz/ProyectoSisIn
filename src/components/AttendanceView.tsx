@@ -37,6 +37,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const { modalState, hideModal, showConfirm } = useModal();
+  const [deleteReason, setDeleteReason] = useState('');
 
   // Estados para la edición en línea
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
@@ -152,9 +153,31 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleDeleteSelected = async () => {
     if (selectedWorkers.length === 0) return;
 
+    // Reiniciar el motivo al abrir el modal
+    setDeleteReason('');
+
+    const messageContent = (
+      <div>
+        <p>{`¿Estás seguro que deseas eliminar los registros de asistencia de ${selectedWorkers.length} trabajador(es) para el día ${formattedSelectedDate()}?`}</p>
+        <p><strong>Esta acción no se puede deshacer.</strong></p>
+        <div className="form-group" style={{ marginTop: '20px' }}>
+          <label htmlFor="deleteReason">Motivo de la eliminación (obligatorio):</label>
+          <input
+            id="deleteReason"
+            type="text"
+            className="form-control"
+            // El estado se actualiza directamente en el input del modal
+            onChange={(e) => setDeleteReason(e.target.value)}
+            placeholder="Ej: Registro duplicado, error de marcación..."
+            autoFocus
+          />
+        </div>
+      </div>
+    );
+
     showConfirm(
       'Confirmar Eliminación',
-      `¿Estás seguro que deseas eliminar los registros de asistencia de ${selectedWorkers.length} trabajador(es) para el día ${formattedSelectedDate()}? Esta acción no se puede deshacer.`,
+      messageContent,
       async () => {
         setLoading(true);
         try {
@@ -167,8 +190,9 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
               });
             }
           });
-
-          await attendanceService.deleteAttendanceRecords(recordIdsToDelete);
+          
+          // Pasamos el motivo al servicio
+          await attendanceService.deleteAttendanceRecords(recordIdsToDelete, deleteReason);
           await fetchAttendance(selectedDate); // Recargar datos
           setSelectedWorkers([]); // Limpiar selección
         } catch (err) {
@@ -181,7 +205,9 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
       {
         confirmText: 'Sí, eliminar',
         cancelText: 'Cancelar',
-        type: 'danger'
+        type: 'danger',
+        // Deshabilitar el botón de confirmación si no hay motivo
+        isConfirmDisabled: !deleteReason.trim()
       }
     );
   };

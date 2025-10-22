@@ -224,16 +224,19 @@ export const attendanceService = {
   },
 
   // Eliminar múltiples registros de asistencia por sus IDs
-  async deleteAttendanceRecords(recordIds: string[]): Promise<void> {
+  async deleteAttendanceRecords(recordIds: string[], reason: string): Promise<void> {
     if (recordIds.length === 0) return;
     try {
       const batch = writeBatch(db);
       recordIds.forEach(id => {
         const docRef = doc(db, ATTENDANCE_COLLECTION, id);
+        // En un futuro, en lugar de borrar, podríamos mover esto a una colección 'deleted_attendance'
+        // o actualizar un campo 'status' a 'deleted'.
+        // Por ahora, lo eliminamos directamente.
         batch.delete(docRef);
       });
       await batch.commit();
-      console.log(`${recordIds.length} registros de asistencia eliminados.`);
+      console.log(`${recordIds.length} registros de asistencia eliminados. Motivo: ${reason}`);
     } catch (error) {
       console.error('Error al eliminar registros de asistencia:', error);
       throw new Error('No se pudieron eliminar los registros de asistencia');
