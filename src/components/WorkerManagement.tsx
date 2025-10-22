@@ -11,9 +11,11 @@ import Modal from './Modal';
 import PayrollAdjustmentModal from './PayrollAdjustmentModal';
 import PayrollHistoryModal from './PayrollHistoryModal';
 import BonusModal from './BonusModal';
+import AttendanceView from './AttendanceView'; // Importar la nueva vista de asistencia
 import { useModal } from '../hooks/useModal';
 
 import './WorkerManagement.css';
+import './AttendanceModal.css'; // Importar los estilos del nuevo modal
 
 const WorkerManagement: React.FC = () => {
   const { userRole, currentUser } = useAuth();
@@ -23,6 +25,9 @@ const WorkerManagement: React.FC = () => {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [payrollSettings, setPayrollSettings] = useState<PayrollSettings>(DEFAULT_PAYROLL_SETTINGS);
+
+  // Estado para controlar la vista actual
+  const [currentView, setCurrentView] = useState<'workers' | 'attendance'>('workers');
   
   // Estados de formularios
   const [showCreateWorkerForm, setShowCreateWorkerForm] = useState(false);
@@ -64,6 +69,15 @@ const WorkerManagement: React.FC = () => {
     baseSalary: DEFAULT_PAYROLL_SETTINGS.baseSalary
   });
 
+  // Eliminar el archivo AttendanceModal.tsx ya que fue renombrado
+  // He movido la lógica a AttendanceView.tsx
+
+  // Cambiar el nombre del import
+  // import AttendanceView from './AttendanceView';
+
+  // Cambiar el estado del modal de asistencia
+  // const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  // a:
 
 
   // Cargar datos desde Firestore
@@ -522,6 +536,16 @@ const WorkerManagement: React.FC = () => {
     }
   };
 
+  // Renderizar la vista de asistencia
+  if (currentView === 'attendance') {
+    return (
+      <AttendanceView
+        onBack={() => setCurrentView('workers')}
+        workers={workers}
+      />
+    );
+  }
+
   if (loading) {
     return <div className="loading">Cargando datos de trabajadores...</div>;
   }
@@ -545,7 +569,7 @@ const WorkerManagement: React.FC = () => {
           </button>
           <button 
             className="btn btn-secondary" 
-            onClick={() => alert('Función por implementar')}
+            onClick={() => setCurrentView('attendance')}
           >
             Asistencia
           </button>

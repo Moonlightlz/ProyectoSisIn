@@ -197,6 +197,31 @@ export const attendanceService = {
     }
   },
 
+  // Obtener todas las asistencias de un día específico
+  async getAttendanceForDay(date: Date): Promise<any[]> {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const attendanceRef = collection(db, ATTENDANCE_COLLECTION);
+      const q = query(
+        attendanceRef,
+        where('timestamp', '>=', Timestamp.fromDate(startOfDay)),
+        where('timestamp', '<=', Timestamp.fromDate(endOfDay)),
+        orderBy('timestamp', 'asc')
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error('Error fetching attendance for day:', error);
+      throw new Error('No se pudieron cargar los registros de asistencia del día');
+    }
+  },
+
   // Obtener asistencias por trabajador y rango de fechas
   async getAttendanceByWorker(
     workerId: string, 
