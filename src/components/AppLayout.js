@@ -31,7 +31,6 @@ function AppLayout({ onLogout }) {
           {isAdmin && <NavLink to="/workers">Trabajadores</NavLink>}
           {/* Temporal: Mostrar siempre para debugging */}
           {!isAdmin && <NavLink to="/workers" style={{opacity: 0.7}}>Trabajadores (Debug)</NavLink>}
-          <NavLink to="/profile">Perfil</NavLink>
           <button onClick={handleLogout} className="logout-btn">
             Cerrar Sesión
           </button>
