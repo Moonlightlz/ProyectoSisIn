@@ -22,7 +22,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   const [workers, setWorkers] = useState([]); // Para almacenar la lista de trabajadores
 
   // Hook para el modal de confirmación
-  const { modalState, hideModal, showConfirm } = useModal();
+  const { modalState, hideModal, showConfirm, showSuccess, showError } = useModal();
 
   const handleSubmit = async (event) => {
     event.preventDefault(); // Previene el comportamiento por defecto del formulario
@@ -116,30 +116,48 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
       'Confirmar Break',
       '¿Estás seguro que quieres marcar tu break?',
       () => {
-        window.alert('Break registrado'); // Mantenemos el alert final por ahora
+        // El hideModal() se ejecuta primero desde useModal,
+        // luego mostramos el mensaje de éxito.
+        // El showSuccess ahora se cierra solo.
+        setTimeout(() => showSuccess('Break Registrado', 'Se marcó tu break correctamente.'), 100);
       }
     );
   };
 
-  const handleEntradaSalida = () => {
+  const handleEntrada = () => {
     if (!foundUser) {
       setNotification({ type: 'error', message: 'Usuario no encontrado. Verifica el DNI.' });
       return;
     }
-
-    const action = hasMarkedEntry ? 'salida' : 'entrada';
     showConfirm(
-      `Confirmar ${action.charAt(0).toUpperCase() + action.slice(1)}`,
-      `¿Estás seguro que quieres marcar tu ${action}?`,
+      'Confirmar Entrada',
+      '¿Estás seguro que quieres marcar tu entrada?',
       () => {
-        if (hasMarkedEntry) {
-          window.alert('Salida registrada');
-          setHasMarkedEntry(false);
-        } else {
-          window.alert('Entrada registrada');
+        // Usamos un timeout para asegurar que el modal de confirmación se cierre
+        // antes de que aparezca el de éxito.
+        setTimeout(() => {
+          showSuccess('Entrada Registrada', 'Se marcó tu entrada correctamente.');
           setHasMarkedEntry(true);
-        }
-        // Aquí iría la lógica para registrar en la base de datos
+        }, 100);
+      }
+    );
+  };
+
+  const handleSalida = () => {
+    if (!foundUser) {
+      setNotification({ type: 'error', message: 'Usuario no encontrado. Verifica el DNI.' });
+      return;
+    }
+    showConfirm(
+      'Confirmar Salida',
+      '¿Estás seguro que quieres marcar tu salida?',
+      () => {
+        // Usamos un timeout para asegurar que el modal de confirmación se cierre
+        // antes de que aparezca el de éxito.
+        setTimeout(() => {
+          showSuccess('Salida Registrada', 'Se marcó tu salida correctamente.');
+          setHasMarkedEntry(false);
+        }, 100);
       }
     );
   };
@@ -174,11 +192,14 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
             {dni.length === 8 && !foundUser && <p className="user-not-found-message">Usuario no encontrado</p>}
           </div>
 
+          <button type="button" className="asistencia-button-action entrada" onClick={handleEntrada}>
+            Marcar Entrada
+          </button>
           <button type="button" className="asistencia-button-action break" onClick={handleBreak}>
             Break
           </button>
-          <button type="button" className={`asistencia-button-action ${hasMarkedEntry ? 'salida' : 'entrada'}`} onClick={handleEntradaSalida}>
-            {hasMarkedEntry ? 'Marcar Salida' : 'Marcar Entrada'}
+          <button type="button" className="asistencia-button-action salida" onClick={handleSalida}>
+            Marcar Salida
           </button>
           <button type="button" className="back-to-login-button" onClick={() => setAsistenciaMode(false)}>
             ‹ Volver al Login

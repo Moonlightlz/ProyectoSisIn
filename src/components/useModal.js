@@ -37,5 +37,25 @@ export const useModal = () => {
     });
   };
 
-  return { modalState, hideModal, showConfirm };
+  const showSuccess = (title, message) => {
+    // Muestra el modal de éxito
+    showModal({
+      title,
+      message,
+      type: 'success',
+    });
+
+    // Cierra el modal automáticamente después de 2 segundos
+    setTimeout(() => hideModal(), 2000);
+  };
+
+  const showError = (title, message) => {
+    showModal({
+      title,
+      message,
+      type: 'error',
+    });
+  };
+
+  return { modalState, hideModal, showConfirm, showSuccess, showError };
 };
