@@ -197,7 +197,7 @@ const WorkerManagement: React.FC = () => {
       await workerService.createWorker(newWorker, currentUser.uid);
       
       // Refrescar la lista de trabajadores
-      await loadData();
+      await loadData(); // Esto recargará los trabajadores y los pasará actualizados a AttendanceView
       
       // Limpiar formulario
       setNewWorker({
