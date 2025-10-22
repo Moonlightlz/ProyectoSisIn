@@ -36,7 +36,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
-  const { modalState, hideModal, showConfirm } = useModal();
+  const { modalState, hideModal, showConfirm, showError } = useModal();
   const [deleteReason, setDeleteReason] = useState('');
   const [editReason, setEditReason] = useState(''); // Estado para el motivo de la edición
 
@@ -317,6 +317,21 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
     />
   );
 
+  const handleEditClick = () => {
+    if (selectedWorkers.length === 0) {
+      showError('Ningún trabajador seleccionado', 'Por favor, selecciona un trabajador de la tabla para editar.');
+      return;
+    }
+
+    if (selectedWorkers.length > 1) {
+      showError('Demasiados trabajadores seleccionados', 'Solo puedes editar un trabajador a la vez.');
+      return;
+    }
+
+    // Si hay exactamente un trabajador seleccionado, activa el modo de edición para él.
+    handleDoubleClick(selectedWorkers[0]);
+  };
+
   return (
     <div className="attendance-view">
       <div className="header">
@@ -327,7 +342,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           <h1>Registros de Asistencia</h1>
         </div>
         <div className="header-actions">
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" onClick={handleEditClick}>
             <FaEdit /> Editar
           </button>
           <button className="btn btn-secondary">
