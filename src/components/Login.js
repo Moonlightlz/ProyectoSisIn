@@ -88,17 +88,6 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
         <button type="submit" className="login-button" disabled={loading}>
           {loading ? 'Iniciando sesión...' : 'Entrar'}
         </button>
-        <div className="login-options">
-          <p className="forgot-password">
-            <button 
-              type="button" 
-              className="forgot-password-link"
-              onClick={() => alert('Funcionalidad no implementada. Contacta al administrador del sistema.')}
-            >
-              ¿Olvidaste tu contraseña?
-            </button>
-          </p>
-        </div>
       </form>
     </div>
   );

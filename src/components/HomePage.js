@@ -128,6 +128,11 @@ const SaleDetailsView = ({ sale, onClose }) => {
         <div className="sale-summary">
           <h3><FaDollarSign className="info-icon" /> Resumen Total</h3>
           <div className="summary-details">
+                      {sale.notes && (
+            <div className="sale-notes">
+              <h4>Notas: {sale.notes}</h4>
+            </div>
+          )}
             <div className="summary-item">
               <span>Total Pares:</span> 
               <strong>{sale.totalQuantity}</strong>
@@ -141,12 +146,7 @@ const SaleDetailsView = ({ sale, onClose }) => {
               <strong>S/ {sale.totalAmount.toFixed(2)}</strong>
             </div>
           </div>
-          {sale.notes && (
-            <div className="sale-notes">
-              <h4>Notas:</h4>
-              <p>{sale.notes}</p>
-            </div>
-          )}
+          
         </div>
       </div>
     </div>
