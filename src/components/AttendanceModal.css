@@ -105,7 +105,7 @@
 .attendance-table tbody tr:hover {
   background-color: #f1f5f9;
 }
-
+/*
 .attendance-table td {
   color: #333;
   font-size: 14px;
@@ -114,7 +114,7 @@
 .attendance-table td:last-child {
   font-weight: 600;
 }
-
+*/
 /* Estilos para la fila de ausentes */
 .attendance-table tbody tr.absent-row {
   background-color: #fff5f5;
@@ -128,7 +128,7 @@
 .attendance-table tbody tr.absent-row td {
   color: #999;
 }
-
+/*
 /* Estilos para la columna de Faltas */
 .absences-count {
   text-align: center;
@@ -142,7 +142,7 @@
 
 .absences-count.absent {
   color: #dc3545; /* Rojo */
-}
+}*/
 
 /* Estilos para edición en línea */
 .attendance-table tbody tr.editing-row {

@@ -244,12 +244,15 @@ export const attendanceService = {
   },
 
   // Actualizar un único registro de asistencia (ej: cambiar la hora)
-  async updateAttendanceRecord(recordId: string, newTimestamp: Date): Promise<void> {
+  async updateAttendanceRecord(recordId: string, newTimestamp: Date, reason: string): Promise<void> {
     try {
       const recordRef = doc(db, ATTENDANCE_COLLECTION, recordId);
       await updateDoc(recordRef, {
-        timestamp: Timestamp.fromDate(newTimestamp)
+        timestamp: Timestamp.fromDate(newTimestamp),
+        lastEditReason: reason,
+        lastEditedAt: Timestamp.now()
       });
+      console.log(`Registro ${recordId} actualizado. Motivo: ${reason}`);
     } catch (error) {
       console.error('Error al actualizar el registro de asistencia:', error);
       throw new Error('No se pudo actualizar el registro de asistencia');

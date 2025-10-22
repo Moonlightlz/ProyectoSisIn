@@ -38,6 +38,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const { modalState, hideModal, showConfirm } = useModal();
   const [deleteReason, setDeleteReason] = useState('');
+  const [editReason, setEditReason] = useState(''); // Estado para el motivo de la edición
 
   // Estados para la edición en línea
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
@@ -123,11 +124,13 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
     return '---';
   };
 
-  // Filtrar la lista completa de trabajadores por DNI
-  const filteredWorkers = workers.filter(worker =>
-    worker.dni.startsWith(searchDni)
-  );
-
+  // Convertir los datos de asistencia agrupados en un array y filtrarlos por DNI
+  const displayedAttendance = Object.entries(attendanceData)
+    .map(([workerId, data]) => ({
+      workerId,
+      ...data,
+    }))
+    .filter(item => item.dni.startsWith(searchDni));
   // Formatear la fecha seleccionada para mostrar en la tabla
   const formattedSelectedDate = () => {
     const [year, month, day] = selectedDate.split('-');
@@ -144,7 +147,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedWorkers(filteredWorkers.map(w => w.id));
+      setSelectedWorkers(displayedAttendance.map(item => item.workerId));
     } else {
       setSelectedWorkers([]);
     }
@@ -238,9 +241,29 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleSaveEdit = () => {
     if (!editingRowId) return;
 
+    // Reiniciar el motivo al abrir el modal
+    setEditReason('');
+
+    const messageContent = (
+      <div>
+        <p>¿Estás seguro de realizar esta modificación en los registros de asistencia?</p>
+        <div className="form-group" style={{ marginTop: '20px' }}>
+          <label htmlFor="editReason">Motivo de la modificación (obligatorio):</label>
+          <input
+            id="editReason"
+            type="text"
+            className="form-control"
+            onChange={(e) => setEditReason(e.target.value)}
+            placeholder="Ej: Corrección de hora de salida, olvido de marcación..."
+            autoFocus
+          />
+        </div>
+      </div>
+    );
+
     showConfirm(
       'Confirmar Modificación',
-      '¿Estás seguro de realizar esta modificación en los registros de asistencia?',
+      messageContent,
       async () => {
         setLoading(true);
         try {
@@ -259,7 +282,8 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
               if (!isNaN(hours) && !isNaN(minutes)) {
                 const newDate = record.timestamp.toDate();
                 newDate.setHours(hours, minutes, 0, 0);
-                updates.push(attendanceService.updateAttendanceRecord(record.id, newDate));
+                // Pasamos el motivo al servicio (aunque actualmente solo lo loguea)
+                updates.push(attendanceService.updateAttendanceRecord(record.id, newDate, editReason));
               }
             }
           }
@@ -277,7 +301,8 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
       {
         confirmText: 'Sí, guardar',
         cancelText: 'Cancelar',
-        type: 'primary'
+        type: 'primary',
+        isConfirmDisabled: !editReason.trim() // Deshabilitar si no hay motivo
       }
     );
   };
@@ -350,7 +375,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
 
       {loading && <div className="loading">Cargando asistencias...</div>}
       {error && <div className="error-message">{error}</div>}
-      {!loading && filteredWorkers.length === 0 && <p className="no-data-message">No se encontraron trabajadores con los filtros aplicados.</p>}
+      {!loading && displayedAttendance.length === 0 && <p className="no-data-message">No hay registros de asistencia para la fecha y filtros seleccionados.</p>}
 
       <div className="attendance-table-container">
         <table className="attendance-table">
@@ -359,8 +384,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
               <th>
                 <input
                   type="checkbox"
-                  onChange={handleSelectAll}
-                  checked={filteredWorkers.length > 0 && selectedWorkers.length === filteredWorkers.length}
+                  onChange={handleSelectAll}                  checked={displayedAttendance.length > 0 && selectedWorkers.length === displayedAttendance.length}
                 />
               </th>
               <th>Empleado</th>
@@ -371,54 +395,46 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
               <th>Break Fin</th>
               <th>Salida</th>
               <th>Total de Horas</th>
-              <th>Faltas</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filteredWorkers.map((worker) => {
-              const workerAttendance = attendanceData[worker.id];
-              const isAbsent = !workerAttendance;
-
+            {displayedAttendance.map((attendanceItem) => {
               return (
                 <tr
-                  key={worker.id}
-                  className={`${isAbsent ? 'absent-row' : ''} ${editingRowId === worker.id ? 'editing-row' : ''}`}
-                  onDoubleClick={() => handleDoubleClick(worker.id)}
+                  key={attendanceItem.workerId}
+                  className={`${editingRowId === attendanceItem.workerId ? 'editing-row' : ''}`}
+                  onDoubleClick={() => handleDoubleClick(attendanceItem.workerId)}
                 >
                   <td>
                     <input
                       type="checkbox"
-                      checked={selectedWorkers.includes(worker.id)}
-                      onChange={() => handleSelectWorker(worker.id)}
-                      disabled={isAbsent}
+                      checked={selectedWorkers.includes(attendanceItem.workerId)}
+                      onChange={() => handleSelectWorker(attendanceItem.workerId)}
                     />
                   </td>
-                  <td>{worker.name}</td>
-                  <td>{worker.dni}</td>
+                  <td>{attendanceItem.workerName}</td>
+                  <td>{attendanceItem.dni}</td>
                   <td>{formattedSelectedDate()}</td>
                   <td>
-                    {editingRowId === worker.id
+                    {editingRowId === attendanceItem.workerId
                       ? renderEditableCell(editFormData.entry, 'entry')
-                      : (isAbsent ? '---' : getRecordTime(workerAttendance.records, 'entry'))}
+                      : getRecordTime(attendanceItem.records, 'entry')}
                   </td>
                   <td>
-                    {editingRowId === worker.id
+                    {editingRowId === attendanceItem.workerId
                       ? renderEditableCell(editFormData.break, 'break')
-                      : (isAbsent ? '---' : getRecordTime(workerAttendance.records, 'break'))}
+                      : getRecordTime(attendanceItem.records, 'break')}
                   </td>
-                  <td>{isAbsent ? '---' : getBreakEndTime(workerAttendance.records)}</td>
+                  <td>{getBreakEndTime(attendanceItem.records)}</td>
                   <td>
-                    {editingRowId === worker.id
+                    {editingRowId === attendanceItem.workerId
                       ? renderEditableCell(editFormData.exit, 'exit')
-                      : (isAbsent ? '---' : getRecordTime(workerAttendance.records, 'exit'))}
+                      : getRecordTime(attendanceItem.records, 'exit')}
                   </td>
-                  <td>{isAbsent ? '---' : calculateTotalHours(workerAttendance.records)}</td>
-                  <td className={`absences-count ${isAbsent ? 'absent' : 'present'}`}>
-                    {isAbsent ? 1 : 0}
-                  </td>
+                  <td>{calculateTotalHours(attendanceItem.records)}</td>
                   <td className="actions-cell">
-                    {editingRowId === worker.id && (
+                    {editingRowId === attendanceItem.workerId && (
                       <div className="inline-actions">
                         <button className="btn-icon btn-save" onClick={handleSaveEdit} title="Guardar"><FaSave /></button>
                         <button className="btn-icon btn-cancel" onClick={handleCancelEdit} title="Cancelar"><FaTimes /></button>
