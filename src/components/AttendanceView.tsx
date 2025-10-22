@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { attendanceService } from '../services/workerService';
 import { Worker } from '../types/payroll';
-import { FaArrowLeft, FaEdit, FaHistory, FaFileExport, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaHistory, FaFileExport, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
 import './AttendanceModal.css';
 import Modal from './Modal'; // Importar el componente Modal
 import { useModal } from '../hooks/useModal'; // Importar el hook para modales
@@ -37,6 +37,12 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const { modalState, hideModal, showConfirm } = useModal();
+
+  // Estados para la edición en línea
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<{ entry: string; break: string; exit: string }>({
+    entry: '', break: '', exit: ''
+  });
 
   const fetchAttendance = async (date: string) => {
     setLoading(true);
@@ -180,6 +186,86 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
     );
   };
 
+  const handleDoubleClick = (workerId: string) => {
+    if (loading || editingRowId) return; // No permitir edición si ya se está editando o cargando
+    const workerAttendance = attendanceData[workerId];
+    if (!workerAttendance) return; // No se puede editar un trabajador ausente
+
+    setEditingRowId(workerId);
+    setEditFormData({
+      entry: getRecordTime(workerAttendance.records, 'entry').replace('---', ''),
+      break: getRecordTime(workerAttendance.records, 'break').replace('---', ''),
+      exit: getRecordTime(workerAttendance.records, 'exit').replace('---', ''),
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRowId(null);
+    setEditFormData({ entry: '', break: '', exit: '' });
+  };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingRowId) return;
+
+    showConfirm(
+      'Confirmar Modificación',
+      '¿Estás seguro de realizar esta modificación en los registros de asistencia?',
+      async () => {
+        setLoading(true);
+        try {
+          const workerAttendance = attendanceData[editingRowId];
+          if (!workerAttendance) throw new Error('No se encontraron datos de asistencia para guardar.');
+
+          const updates: Promise<void>[] = [];
+          const recordTypes: ('entry' | 'break' | 'exit')[] = ['entry', 'break', 'exit'];
+
+          for (const type of recordTypes) {
+            const record = workerAttendance.records.find(r => r.type === type);
+            const newTime = editFormData[type];
+
+            if (record && newTime) {
+              const [hours, minutes] = newTime.split(':').map(Number);
+              if (!isNaN(hours) && !isNaN(minutes)) {
+                const newDate = record.timestamp.toDate();
+                newDate.setHours(hours, minutes, 0, 0);
+                updates.push(attendanceService.updateAttendanceRecord(record.id, newDate));
+              }
+            }
+          }
+
+          await Promise.all(updates);
+          await fetchAttendance(selectedDate); // Recargar datos
+          handleCancelEdit(); // Salir del modo edición
+        } catch (err) {
+          setError('Error al guardar las modificaciones.');
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      },
+      {
+        confirmText: 'Sí, guardar',
+        cancelText: 'Cancelar',
+        type: 'primary'
+      }
+    );
+  };
+
+  const renderEditableCell = (value: string, name: 'entry' | 'break' | 'exit') => (
+    <input
+      type="time"
+      name={name}
+      value={value}
+      onChange={handleEditFormChange}
+      className="editable-cell-input"
+    />
+  );
+
   return (
     <div className="attendance-view">
       <div className="header">
@@ -260,6 +346,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
               <th>Salida</th>
               <th>Total de Horas</th>
               <th>Faltas</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -268,7 +355,11 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
               const isAbsent = !workerAttendance;
 
               return (
-                <tr key={worker.id} className={isAbsent ? 'absent-row' : ''}>
+                <tr
+                  key={worker.id}
+                  className={`${isAbsent ? 'absent-row' : ''} ${editingRowId === worker.id ? 'editing-row' : ''}`}
+                  onDoubleClick={() => handleDoubleClick(worker.id)}
+                >
                   <td>
                     <input
                       type="checkbox"
@@ -280,13 +371,33 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
                   <td>{worker.name}</td>
                   <td>{worker.dni}</td>
                   <td>{formattedSelectedDate()}</td>
-                  <td>{isAbsent ? '---' : getRecordTime(workerAttendance.records, 'entry')}</td>
-                  <td>{isAbsent ? '---' : getRecordTime(workerAttendance.records, 'break')}</td>
+                  <td>
+                    {editingRowId === worker.id
+                      ? renderEditableCell(editFormData.entry, 'entry')
+                      : (isAbsent ? '---' : getRecordTime(workerAttendance.records, 'entry'))}
+                  </td>
+                  <td>
+                    {editingRowId === worker.id
+                      ? renderEditableCell(editFormData.break, 'break')
+                      : (isAbsent ? '---' : getRecordTime(workerAttendance.records, 'break'))}
+                  </td>
                   <td>{isAbsent ? '---' : getBreakEndTime(workerAttendance.records)}</td>
-                  <td>{isAbsent ? '---' : getRecordTime(workerAttendance.records, 'exit')}</td>
+                  <td>
+                    {editingRowId === worker.id
+                      ? renderEditableCell(editFormData.exit, 'exit')
+                      : (isAbsent ? '---' : getRecordTime(workerAttendance.records, 'exit'))}
+                  </td>
                   <td>{isAbsent ? '---' : calculateTotalHours(workerAttendance.records)}</td>
                   <td className={`absences-count ${isAbsent ? 'absent' : 'present'}`}>
                     {isAbsent ? 1 : 0}
+                  </td>
+                  <td className="actions-cell">
+                    {editingRowId === worker.id && (
+                      <div className="inline-actions">
+                        <button className="btn-icon btn-save" onClick={handleSaveEdit} title="Guardar"><FaSave /></button>
+                        <button className="btn-icon btn-cancel" onClick={handleCancelEdit} title="Cancelar"><FaTimes /></button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               );

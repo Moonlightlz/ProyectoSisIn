@@ -240,6 +240,19 @@ export const attendanceService = {
     }
   },
 
+  // Actualizar un único registro de asistencia (ej: cambiar la hora)
+  async updateAttendanceRecord(recordId: string, newTimestamp: Date): Promise<void> {
+    try {
+      const recordRef = doc(db, ATTENDANCE_COLLECTION, recordId);
+      await updateDoc(recordRef, {
+        timestamp: Timestamp.fromDate(newTimestamp)
+      });
+    } catch (error) {
+      console.error('Error al actualizar el registro de asistencia:', error);
+      throw new Error('No se pudo actualizar el registro de asistencia');
+    }
+  },
+
   // Obtener asistencias por trabajador y rango de fechas
   async getAttendanceByWorker(
     workerId: string, 
