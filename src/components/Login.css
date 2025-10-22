@@ -1,6 +1,7 @@
 /* Estilos generales para el contenedor del login */
 .login-container {
   display: flex;
+  flex-direction: column; /* Apila los elementos verticalmente */
   justify-content: center;
   align-items: center;
   min-height: 100vh; /* Ocupa toda la altura de la ventana */
@@ -175,3 +176,145 @@
   cursor: not-allowed;
 }
 
+/* --- Agrega este código a tu archivo Login.css --- */
+
+/*
+  Estilos para el botón de Asistencia que está fuera del formulario.
+  La clave es añadir width y max-width para que sea proporcional al formulario.
+*/
+.asistencia-button-outside {
+  width: 100%;
+  max-width: 400px; /* Mismo max-width que el .login-form para que sea proporcional */
+  margin-top: 20px; /* Espacio para separarlo del formulario */
+  background-color: #6c757d; /* Un color secundario (gris oscuro) */
+  color: white;
+  box-shadow: 0 2px 4px rgba(233, 54, 233, 0.05); /* Sombra más suave */
+}
+
+/*
+  Efecto hover para el botón de asistencia, para que se sienta interactivo.
+*/
+.asistencia-button-outside:hover {
+  background-color: #5a6268; /* Un gris un poco más oscuro */
+  transform: translateY(-2px); /* Mismo efecto de elevación que el botón principal */
+}
+
+/* --- Estilos para la interfaz de Asistencia --- */
+
+.asistencia-form {
+  background-color: #ffffff;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.asistencia-form h2 {
+  margin-bottom: 30px;
+  color: #333;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.asistencia-form input[type="text"] {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 2px;
+  color: #333;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.asistencia-form input[type="text"]:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  outline: none;
+}
+
+.asistencia-button-action {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 20px;
+  color: white;
+}
+
+.asistencia-button-action.entrada { background-color: #28a745; } /* Verde */
+.asistencia-button-action.entrada:hover { background-color: #218838; }
+
+.asistencia-button-action.salida { background-color: #dc3545; } /* Rojo */
+.asistencia-button-action.salida:hover { background-color: #c82333; }
+
+.asistencia-button-action.break { background-color: #ffc107; } /* Amarillo */
+.asistencia-button-action.break:hover { background-color: #e0a800; }
+
+.back-to-login-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 25px;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.back-to-login-button:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+.notification-message {
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  animation: errorSlideIn 0.3s ease-out;
+}
+
+.notification-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.notification-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Contenedor para mostrar el nombre del usuario encontrado */
+.user-display-container {
+  min-height: 50px; /* Altura fija para evitar que el layout salte */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.found-user-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #28a745; /* Verde éxito */
+  animation: fadeIn 0.5s ease;
+}
+
+.user-not-found-message {
+  font-size: 16px;
+  font-weight: 500;
+  color: #dc3545; /* Rojo error */
+  animation: fadeIn 0.5s ease;
+}
