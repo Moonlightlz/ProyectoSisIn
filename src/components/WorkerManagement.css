@@ -63,7 +63,7 @@
 }
 
 .btn-secondary:hover {
-  background: #545b62;
+  background: #454d55;
 }
 
 .btn-success {
@@ -210,8 +210,8 @@
 
 /* Estilos para el botón de toggle de planilla */
 .btn-secondary {
-  background-color: #6c757d !important;
-  border-color: #6c757d !important;
+  background-color: #d44747 !important;
+  border-color: #6d7a86 !important;
   color: white !important;
 }
 

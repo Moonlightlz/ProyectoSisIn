@@ -547,7 +547,7 @@ const WorkerManagement: React.FC = () => {
             className="btn btn-secondary" 
             onClick={() => alert('Función por implementar')}
           >
-            Registrar Asistencia
+            Asistencia
           </button>
         </div>
       </div>
