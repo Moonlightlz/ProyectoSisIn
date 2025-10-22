@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css'; // Importamos el archivo CSS para los estilos
 import { db } from '../firebase';
-import { collection, getDocs } from 'firebase/firestore';
 import Modal from './Modal';
-import { useModal } from '../hooks/useModal';
+import { useModal } from './useModal'; // Corregido para consistencia
+import { workerService, attendanceService } from '../services/workerService'; // Importamos el servicio de trabajadores y asistencia
 
 function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   const [email, setEmail] = useState('');
@@ -72,28 +72,26 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
 
   // --- Lógica para la Interfaz de Asistencia ---
 
-  // Cargar la lista de trabajadores una vez cuando se entra al modo asistencia
+  // Cargar la lista de trabajadores desde Firebase cuando se entra al modo asistencia
   useEffect(() => {
-    // --- INICIO: Datos estáticos para prueba ---
-    const staticWorkers = [
-      { id: 'worker-1', name: 'Juan Perez', dni: '12345678' },
-      { id: 'worker-2', name: 'Maria Garcia', dni: '87654321' },
-      { id: 'worker-3', name: 'Pedro Ramirez', dni: '11223344' },
-    ];
-
-    if (isAsistenciaMode) {
-      console.log('🧪 Usando datos estáticos de trabajadores para prueba.');
-      setWorkers(staticWorkers);
-    }
-    // --- FIN: Datos estáticos para prueba ---
-
-    // const fetchWorkers = async () => {
-    //   if (isAsistenciaMode && workers.length === 0) {
-    //     // ... código original para conectar a Firebase
-    //   }
-    // };
-    // fetchWorkers();
-  }, [isAsistenciaMode, workers.length]); // Agregado workers.length para evitar recargas innecesarias
+    const fetchWorkers = async () => {
+      if (isAsistenciaMode) {
+        setLoading(true);
+        try {
+          console.log('Cargando trabajadores desde Firebase...');
+          const workersData = await workerService.getAllWorkers();
+          setWorkers(workersData);
+          console.log('Trabajadores cargados exitosamente:', workersData.length);
+        } catch (err) {
+          console.error('Error al cargar trabajadores:', err);
+          showError('Error de Carga', 'No se pudieron cargar los datos de los trabajadores. Por favor, intenta de nuevo.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchWorkers();
+  }, [isAsistenciaMode]); // Se ejecuta solo cuando cambia el modo de asistencia
 
   // Buscar al usuario cuando el DNI cambia
   useEffect(() => {
@@ -115,11 +113,26 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
     showConfirm(
       'Confirmar Break',
       '¿Estás seguro que quieres marcar tu break?',
-      () => {
+      async () => {
+        try {
+          await attendanceService.recordAttendance({
+            workerId: foundUser.id,
+            workerName: foundUser.name,
+            type: 'break',
+            timestamp: new Date(),
+          });
+
+          // El hideModal() se ejecuta primero desde useModal,
+          // luego mostramos el mensaje de éxito.
+          // El showSuccess ahora se cierra solo.
+          setTimeout(() => showSuccess('Break Registrado', 'Se marcó tu break correctamente.'), 100);
+        } catch (err) {
+          console.error('Error al registrar el break:', err);
+          showError('Error de Registro', 'No se pudo guardar el registro de break.');
+        }
         // El hideModal() se ejecuta primero desde useModal,
         // luego mostramos el mensaje de éxito.
         // El showSuccess ahora se cierra solo.
-        setTimeout(() => showSuccess('Break Registrado', 'Se marcó tu break correctamente.'), 100);
       }
     );
   };
@@ -132,13 +145,24 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
     showConfirm(
       'Confirmar Entrada',
       '¿Estás seguro que quieres marcar tu entrada?',
-      () => {
-        // Usamos un timeout para asegurar que el modal de confirmación se cierre
-        // antes de que aparezca el de éxito.
-        setTimeout(() => {
-          showSuccess('Entrada Registrada', 'Se marcó tu entrada correctamente.');
-          setHasMarkedEntry(true);
-        }, 100);
+      async () => {
+        try {
+          await attendanceService.recordAttendance({
+            workerId: foundUser.id,
+            workerName: foundUser.name,
+            type: 'entry',
+            timestamp: new Date(),
+          });
+          // Usamos un timeout para asegurar que el modal de confirmación se cierre
+          // antes de que aparezca el de éxito.
+          setTimeout(() => {
+            showSuccess('Entrada Registrada', 'Se marcó tu entrada correctamente.');
+            setHasMarkedEntry(true);
+          }, 100);
+        } catch (err) {
+          console.error('Error al registrar la entrada:', err);
+          showError('Error de Registro', 'No se pudo guardar el registro de entrada.');
+        }
       }
     );
   };
@@ -151,13 +175,24 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
     showConfirm(
       'Confirmar Salida',
       '¿Estás seguro que quieres marcar tu salida?',
-      () => {
-        // Usamos un timeout para asegurar que el modal de confirmación se cierre
-        // antes de que aparezca el de éxito.
-        setTimeout(() => {
-          showSuccess('Salida Registrada', 'Se marcó tu salida correctamente.');
-          setHasMarkedEntry(false);
-        }, 100);
+      async () => {
+        try {
+          await attendanceService.recordAttendance({
+            workerId: foundUser.id,
+            workerName: foundUser.name,
+            type: 'exit',
+            timestamp: new Date(),
+          });
+          // Usamos un timeout para asegurar que el modal de confirmación se cierre
+          // antes de que aparezca el de éxito.
+          setTimeout(() => {
+            showSuccess('Salida Registrada', 'Se marcó tu salida correctamente.');
+            setHasMarkedEntry(false);
+          }, 100);
+        } catch (err) {
+          console.error('Error al registrar la salida:', err);
+          showError('Error de Registro', 'No se pudo guardar el registro de salida.');
+        }
       }
     );
   };

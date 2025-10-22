@@ -184,14 +184,11 @@ export const workerService = {
 
 export const attendanceService = {
   // Registrar asistencia (entrada/salida)
-  async recordAttendance(attendanceData: Omit<AttendanceRecord, 'id'>): Promise<string> {
+  async recordAttendance(attendanceData: { workerId: string; workerName: string; type: 'entry' | 'exit' | 'break'; timestamp: Date }): Promise<string> {
     try {
       const docRef = await addDoc(collection(db, ATTENDANCE_COLLECTION), {
         ...attendanceData,
-        date: Timestamp.fromDate(attendanceData.date),
-        checkIn: attendanceData.checkIn ? Timestamp.fromDate(attendanceData.checkIn) : null,
-        checkOut: attendanceData.checkOut ? Timestamp.fromDate(attendanceData.checkOut) : null,
-        createdAt: Timestamp.now()
+        timestamp: Timestamp.fromDate(attendanceData.timestamp),
       });
       return docRef.id;
     } catch (error) {
