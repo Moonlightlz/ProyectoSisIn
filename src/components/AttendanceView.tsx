@@ -41,7 +41,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
 
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const { modalState, hideModal, showConfirm, showError } = useModal();
-  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteReasonError, setDeleteReasonError] = useState<string | null>(null);
   const [editReasonError, setEditReasonError] = useState<string | null>(null);
 
   // Estados para la edición en línea
@@ -163,8 +163,8 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleDeleteSelected = async () => {
     if (selectedWorkers.length === 0) return;
 
-    // Reiniciar el motivo al abrir el modal
-    setDeleteReason('');
+    // Limpiar el error anterior al abrir el modal
+    setDeleteReasonError(null);
 
     const messageContent = (
       <div>
@@ -176,11 +176,15 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
             id="deleteReason"
             type="text"
             className="form-control"
-            // El estado se actualiza directamente en el input del modal
-            onChange={(e) => setDeleteReason(e.target.value)}
+            onChange={() => {
+              if (deleteReasonError) setDeleteReasonError(null); // Limpiar error al escribir
+            }}
             placeholder="Ej: Registro duplicado, error de marcación..."
             autoFocus
           />
+          {deleteReasonError && (
+            <div style={{ color: 'red', marginTop: '5px', fontSize: '12px' }}>{deleteReasonError}</div>
+          )}
         </div>
       </div>
     );
@@ -190,6 +194,16 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
       messageContent,
       async () => {
         setLoading(true);
+        // Obtener el motivo directamente del input en el DOM para evitar stale state
+        const reasonInput = document.getElementById('deleteReason') as HTMLInputElement;
+        const reason = reasonInput ? reasonInput.value : '';
+
+        if (!reason.trim()) {
+          setDeleteReasonError('Por favor, completa este campo para continuar.');
+          setLoading(false);
+          return false; // No cerrar el modal
+        }
+
         try {
           const recordIdsToDelete: string[] = [];
           selectedWorkers.forEach(workerId => {
@@ -201,23 +215,22 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
             }
           });
           
-          // Pasamos el motivo y el usuario actual al servicio
-          await attendanceService.deleteAttendanceRecords(recordIdsToDelete, deleteReason, currentUser?.email || 'unknown');
+          await attendanceService.deleteAttendanceRecords(recordIdsToDelete, reason, currentUser?.email || 'unknown');
           await fetchAttendance(selectedDate); // Recargar datos
           setSelectedWorkers([]); // Limpiar selección
+          setLoading(false);
+          return true; // Cerrar el modal
         } catch (err) {
           setError('Error al eliminar los registros.');
           console.error(err);
-        } finally {
           setLoading(false);
+          return false; // No cerrar el modal en caso de error
         }
       },
       {
         confirmText: 'Sí, eliminar',
         cancelText: 'Cancelar',
         type: 'danger',
-        // Deshabilitar el botón de confirmación si no hay motivo
-        isConfirmDisabled: !deleteReason.trim()
       }
     );
   };
