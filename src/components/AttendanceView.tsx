@@ -421,23 +421,87 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleExportToPdf = () => {
     setLoading(true);
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF({ orientation: 'landscape' });
       const tableData = displayedAttendance.map(item => [
         item.workerName,
         item.dni,
         getRecordTime(item.records, 'entry'),
-        getRecordTime(item.records, 'break'),
-        getBreakEndTime(item.records),
-        getRecordTime(item.records, 'exit'),
+        getRecordTime(item.records, 'exit'), // Corregido para que coincida con la cabecera
         calculateTotalHours(item.records),
       ]);
 
-      doc.text(`Reporte de Asistencia - ${formattedSelectedDate()}`, 14, 15);
+      const totalWorkers = displayedAttendance.length;
+      const totalPresent = displayedAttendance.filter(item => item.records.length > 0).length;
+      const totalAbsent = totalWorkers - totalPresent;
+
+      const head = [['Empleado', 'DNI', 'Entrada', 'Salida', 'Total Horas']];
+
       autoTable(doc, {
-        startY: 20,
-        head: [['Empleado', 'DNI', 'Entrada', 'Break Inicio', 'Break Fin', 'Salida', 'Total Horas']],
+        head: head,
         body: tableData,
+        startY: 40,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [38, 50, 56], // Un gris oscuro azulado
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        didDrawPage: (data) => {
+          // --- ENCABEZADO ---
+          const pageWidth = doc.internal.pageSize.getWidth();
+          doc.setFontSize(18);
+          doc.setTextColor(40);
+          doc.setFont('helvetica', 'bold');
+          doc.text("Reporte de Asistencia", pageWidth / 2, 22, { align: 'center' });
+
+          doc.setFontSize(11);
+          doc.setTextColor(100);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`Fecha: ${formattedSelectedDate()}`, pageWidth / 2, 29, { align: 'center' });
+
+          // --- PIE DE PÁGINA ---
+          const pageCount = doc.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(150);
+          const pageHeight = doc.internal.pageSize.getHeight();
+
+          doc.text(
+            `Página ${data.pageNumber} de ${pageCount}`,
+            data.settings.margin.left,
+            pageHeight - 10 // Usando la variable
+          );
+          doc.text(
+            `Generado el: ${new Date().toLocaleString('es-PE')}`,
+            pageWidth - data.settings.margin.right,
+            pageHeight - 10, // Usando la variable
+            { align: 'right' }
+          );
+        },
       });
+
+      
+      // --- RESUMEN FINAL ---
+      let finalY = (doc as any).lastAutoTable.finalY; // Obtener la posición Y final de la tabla
+      if (finalY > 200) { // Si la tabla es muy larga, pasar a una nueva página
+        doc.addPage();
+        finalY = 20; // Resetear Y para la nueva página
+      }
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Resumen del Día", 14, finalY + 20);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`- Total de Trabajadores: ${totalWorkers}`, 14, finalY + 28);
+      doc.setTextColor(34, 139, 34); // Verde para presentes
+      doc.text(`- Presentes: ${totalPresent}`, 14, finalY + 34);
+      if (totalAbsent > 0) {
+        doc.setTextColor(220, 20, 60); // Rojo para ausentes
+        doc.text(`- Ausentes: ${totalAbsent}`, 14, finalY + 40);
+      }
 
       doc.save(`asistencia_${selectedDate}.pdf`);
       showSuccess('Exportado', 'El archivo de asistencia se ha descargado como PDF.');
