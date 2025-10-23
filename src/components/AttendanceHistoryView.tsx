@@ -25,6 +25,7 @@ interface AttendanceHistoryViewProps {
 
 const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, workers }) => {
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<AttendanceLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showSuccess, showError } = useModal();
@@ -36,6 +37,7 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
 
   const [startDate, setStartDate] = useState(firstDayOfMonth);
   const [endDate, setEndDate] = useState(lastDayOfMonth);
+  const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
 
   const fetchLogs = async () => {
     if (!startDate || !endDate) {
@@ -63,7 +65,16 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
 
   useEffect(() => {
     fetchLogs();
-  }, []); // Carga inicial
+  }, []); // Carga inicial solo una vez
+
+  // Filtrar logs cuando cambie el DNI o los logs cargados
+  useEffect(() => {
+    if (searchDni.trim() === '') {
+      setFilteredLogs(logs);
+    } else {
+      setFilteredLogs(logs.filter(log => getWorkerDni(log.workerId).startsWith(searchDni)));
+    }
+  }, [searchDni, logs, workers]);
 
   const handleSearch = () => {
     fetchLogs();
@@ -149,9 +160,16 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
 
     const head = [['Empleado', 'DNI', 'Fecha y Hora', 'Acción', 'Motivo', 'Modificado por']];
 
-    doc.text(`Historial de Cambios en Asistencia`, 14, 15);
+    // Título centrado y en negrita
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Historial de Cambios en Asistencia', pageWidth / 2, 15, { align: 'center' });
+
+    // Subtítulo (rango de fechas)
     doc.setFontSize(10);
-    doc.text(`Periodo: ${startDate} al ${endDate}`, 14, 22);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Periodo: ${startDate} al ${endDate}`, pageWidth / 2, 22, { align: 'center' });
 
     autoTable(doc, {
       head: head,
@@ -195,6 +213,15 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
+          {/* Filtro por DNI */}
+          <input
+            type="text"
+            placeholder="Filtrar por DNI..."
+            className="search-input"
+            value={searchDni}
+            onChange={(e) => setSearchDni(e.target.value.replace(/\D/g, ''))}
+            maxLength={8}
+          />
           <button className="btn btn-primary" onClick={handleSearch} disabled={loading}>
             {loading ? 'Buscando...' : 'Buscar'}
           </button>
@@ -215,8 +242,8 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
 
       {loading && <div className="loading">Cargando historial...</div>}
       {error && <div className="error-message">{error}</div>}
+      {!loading && logs.length > 0 && filteredLogs.length === 0 && <p className="no-data-message">No se encontraron registros con el DNI proporcionado.</p>}
       {!loading && logs.length === 0 && <p className="no-data-message">No hay registros de auditoría para el rango de fechas seleccionado.</p>}
-
       <div className="history-table-container">
         <table className="history-table">
           <thead>
@@ -230,7 +257,7 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
             </tr>
           </thead>
           <tbody>
-            {logs.map(log => (
+            {filteredLogs.map(log => (
               <tr key={log.id}>
                 <td>{log.workerName}</td>
                 <td>{getWorkerDni(log.workerId)}</td>
