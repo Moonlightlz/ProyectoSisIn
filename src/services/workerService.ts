@@ -20,6 +20,7 @@ import { Worker, WorkerFormData, AttendanceRecord, Bonus, PayrollSettings } from
 const WORKERS_COLLECTION = 'workers';
 const ATTENDANCE_COLLECTION = 'attendance';
 const BONUSES_COLLECTION = 'bonuses';
+const ATTENDANCE_LOGS_COLLECTION = 'attendance_logs';
 const PAYROLL_SETTINGS_COLLECTION = 'payrollSettings';
 
 // ===============================
@@ -224,19 +225,35 @@ export const attendanceService = {
   },
 
   // Eliminar múltiples registros de asistencia por sus IDs
-  async deleteAttendanceRecords(recordIds: string[], reason: string): Promise<void> {
+  async deleteAttendanceRecords(recordIds: string[], reason: string, deletedBy: string): Promise<void> {
     if (recordIds.length === 0) return;
     try {
       const batch = writeBatch(db);
-      recordIds.forEach(id => {
+      
+      for (const id of recordIds) {
         const docRef = doc(db, ATTENDANCE_COLLECTION, id);
-        // En un futuro, en lugar de borrar, podríamos mover esto a una colección 'deleted_attendance'
-        // o actualizar un campo 'status' a 'deleted'.
-        // Por ahora, lo eliminamos directamente.
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const recordData = docSnap.data();
+          const logRef = doc(collection(db, ATTENDANCE_LOGS_COLLECTION));
+          
+          // Crear un registro en el log de auditoría
+          batch.set(logRef, {
+            action: 'delete',
+            reason: reason,
+            timestamp: Timestamp.now(),
+            modifiedBy: deletedBy,
+            workerId: recordData.workerId,
+            workerName: recordData.workerName,
+            originalRecord: recordData, // Guardar el registro original
+          });
+
+          // Eliminar el registro original
+        }
         batch.delete(docRef);
-      });
+      }
       await batch.commit();
-      console.log(`${recordIds.length} registros de asistencia eliminados. Motivo: ${reason}`);
     } catch (error) {
       console.error('Error al eliminar registros de asistencia:', error);
       throw new Error('No se pudieron eliminar los registros de asistencia');
@@ -244,15 +261,27 @@ export const attendanceService = {
   },
 
   // Actualizar un único registro de asistencia (ej: cambiar la hora)
-  async updateAttendanceRecord(recordId: string, newTimestamp: Date, reason: string): Promise<void> {
+  async updateAttendanceRecord(recordId: string, newTimestamp: Date, reason:string, updatedBy: string): Promise<void> {
     try {
       const recordRef = doc(db, ATTENDANCE_COLLECTION, recordId);
+      const docSnap = await getDoc(recordRef);
+      if (!docSnap.exists()) throw new Error(`Record with id ${recordId} not found.`);
+      
+      const originalData = docSnap.data();
+
+      // Crear log de auditoría
+      await addDoc(collection(db, ATTENDANCE_LOGS_COLLECTION), {
+        action: 'update',
+        reason: reason,
+        timestamp: Timestamp.now(),
+        modifiedBy: updatedBy,
+        workerId: originalData.workerId,
+        workerName: originalData.workerName,
+      });
+
       await updateDoc(recordRef, {
         timestamp: Timestamp.fromDate(newTimestamp),
-        lastEditReason: reason,
-        lastEditedAt: Timestamp.now()
       });
-      console.log(`Registro ${recordId} actualizado. Motivo: ${reason}`);
     } catch (error) {
       console.error('Error al actualizar el registro de asistencia:', error);
       throw new Error('No se pudo actualizar el registro de asistencia');
@@ -303,6 +332,32 @@ export const attendanceService = {
     } catch (error) {
       console.error('Error updating attendance:', error);
       throw new Error('No se pudo actualizar el registro de asistencia');
+    }
+  },
+
+  // Obtener logs de auditoría de asistencia
+  async getAttendanceLogs(startDate: Date, endDate: Date): Promise<any[]> {
+    try {
+      const logsRef = collection(db, ATTENDANCE_LOGS_COLLECTION);
+      const q = query(
+        logsRef,
+        where('timestamp', '>=', Timestamp.fromDate(startDate)),
+        where('timestamp', '<=', Timestamp.fromDate(endDate)),
+        orderBy('timestamp', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          timestamp: data.timestamp.toDate()
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching attendance logs:', error);
+      throw new Error('No se pudieron cargar los logs de auditoría');
     }
   }
 };

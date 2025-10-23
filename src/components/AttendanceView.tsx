@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { attendanceService } from '../services/workerService';
 import { Worker } from '../types/payroll';
-import { FaArrowLeft, FaEdit, FaHistory, FaFileExport, FaTrash, FaSave, FaTimes } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaHistory, FaFileExport, FaTrash, FaSave, FaTimes, FaUserClock } from 'react-icons/fa';
 import './AttendanceModal.css';
 import Modal from './Modal'; // Importar el componente Modal
 import { useModal } from '../hooks/useModal'; // Importar el hook para modales
+import AttendanceHistoryView from './AttendanceHistoryView'; // Importar la nueva vista de historial
+import { useAuth } from '../contexts/AuthContext';
 
 interface AttendanceRecord {
   id: string;
@@ -30,11 +32,13 @@ interface AttendanceViewProps {
 }
 
 const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
+  const { currentUser } = useAuth();
   const [attendanceData, setAttendanceData] = useState<GroupedAttendance>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
+
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const { modalState, hideModal, showConfirm, showError } = useModal();
   const [deleteReason, setDeleteReason] = useState('');
@@ -45,6 +49,9 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [editFormData, setEditFormData] = useState<{ entry: string; break: string; exit: string }>({
     entry: '', break: '', exit: ''
   });
+  
+  // Estado para controlar la vista actual (asistencia o historial)
+  const [currentSubView, setCurrentSubView] = useState<'attendance' | 'history'>('attendance');
 
   const fetchAttendance = async (date: string) => {
     setLoading(true);
@@ -194,8 +201,8 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
             }
           });
           
-          // Pasamos el motivo al servicio
-          await attendanceService.deleteAttendanceRecords(recordIdsToDelete, deleteReason);
+          // Pasamos el motivo y el usuario actual al servicio
+          await attendanceService.deleteAttendanceRecords(recordIdsToDelete, deleteReason, currentUser?.email || 'unknown');
           await fetchAttendance(selectedDate); // Recargar datos
           setSelectedWorkers([]); // Limpiar selección
         } catch (err) {
@@ -282,8 +289,8 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
               if (!isNaN(hours) && !isNaN(minutes)) {
                 const newDate = record.timestamp.toDate();
                 newDate.setHours(hours, minutes, 0, 0);
-                // Pasamos el motivo al servicio (aunque actualmente solo lo loguea)
-                updates.push(attendanceService.updateAttendanceRecord(record.id, newDate, editReason));
+                // Pasamos el motivo y el usuario al servicio
+                updates.push(attendanceService.updateAttendanceRecord(record.id, newDate, editReason, currentUser?.email || 'unknown'));
               }
             }
           }
@@ -332,6 +339,15 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
     handleDoubleClick(selectedWorkers[0]);
   };
 
+  // Si la vista es 'history', renderizamos el componente de historial
+  if (currentSubView === 'history') {
+    return (
+      <AttendanceHistoryView
+        onBack={() => setCurrentSubView('attendance')}
+        workers={workers}
+      />
+    );
+  }
   return (
     <div className="attendance-view">
       <div className="header">
@@ -339,18 +355,19 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           <button className="btn btn-back" onClick={onBack}>
             <FaArrowLeft /> Volver a Trabajadores
           </button>
-          <h1>Registros de Asistencia</h1>
+          <h1><FaUserClock /> Registros de Asistencia</h1>
         </div>
         <div className="header-actions">
           <button className="btn btn-secondary" onClick={handleEditClick}>
             <FaEdit /> Editar
           </button>
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" onClick={() => setCurrentSubView('history')}>
             <FaHistory /> Historial
           </button>
           <button className="btn btn-secondary">
             <FaFileExport /> Exportar
           </button>
+
           <button
             className="btn btn-danger"
             onClick={handleDeleteSelected}
