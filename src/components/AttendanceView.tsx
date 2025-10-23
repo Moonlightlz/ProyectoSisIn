@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { attendanceService } from '../services/workerService';
 import { Worker } from '../types/payroll';
-import { FaArrowLeft, FaEdit, FaHistory, FaFileExport, FaTrash, FaSave, FaTimes, FaUserClock } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaHistory, FaTrash, FaSave, FaTimes, FaUserClock, FaFilePdf, FaFileExcel } from 'react-icons/fa';
 import './AttendanceModal.css';
 import Modal from './Modal'; // Importar el componente Modal
 import { useModal } from '../hooks/useModal'; // Importar el hook para modales
@@ -402,8 +402,23 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           <button className="btn btn-secondary" onClick={() => setCurrentSubView('history')}>
             <FaHistory /> Historial
           </button>
-          <button className="btn btn-secondary">
-            <FaFileExport /> Exportar
+          <button
+            className="btn btn-danger"
+            onClick={() => {
+              console.log('Solicitando exportación a PDF...');
+              // Aquí irá la lógica para generar el PDF
+            }}
+          >
+            <FaFilePdf /> Exportar PDF
+          </button>
+          <button
+            className="btn btn-success"
+            onClick={() => {
+              console.log('Solicitando exportación a Excel...');
+              // Aquí irá la lógica para generar el Excel
+            }}
+          >
+            <FaFileExcel /> Exportar Excel
           </button>
 
           <button
