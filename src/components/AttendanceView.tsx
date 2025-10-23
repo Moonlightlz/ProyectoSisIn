@@ -42,7 +42,6 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const { modalState, hideModal, showConfirm, showError } = useModal();
   const [deleteReason, setDeleteReason] = useState('');
-  const [editReason, setEditReason] = useState(''); // Estado para el motivo de la edición
 
   // Estados para la edición en línea
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
@@ -248,9 +247,6 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleSaveEdit = () => {
     if (!editingRowId) return;
 
-    // Reiniciar el motivo al abrir el modal
-    setEditReason('');
-
     const messageContent = (
       <div>
         <p>¿Estás seguro de realizar esta modificación en los registros de asistencia?</p>
@@ -260,7 +256,6 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
             id="editReason"
             type="text"
             className="form-control"
-            onChange={(e) => setEditReason(e.target.value)}
             placeholder="Ej: Corrección de hora de salida, olvido de marcación..."
             autoFocus
           />
@@ -273,6 +268,15 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
       messageContent,
       async () => {
         setLoading(true);
+        // Obtener el motivo directamente del input en el DOM para evitar stale state
+        const reasonInput = document.getElementById('editReason') as HTMLInputElement;
+        const reason = reasonInput ? reasonInput.value : '';
+
+        if (!reason.trim()) {
+          showError('Motivo requerido', 'Debes ingresar un motivo para la modificación.');
+          setLoading(false);
+          return; // Detiene la ejecución si no hay motivo
+        }
         try {
           const workerAttendance = attendanceData[editingRowId];
           if (!workerAttendance) throw new Error('No se encontraron datos de asistencia para guardar.');
@@ -290,7 +294,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
                 const newDate = record.timestamp.toDate();
                 newDate.setHours(hours, minutes, 0, 0);
                 // Pasamos el motivo y el usuario al servicio
-                updates.push(attendanceService.updateAttendanceRecord(record.id, newDate, editReason, currentUser?.email || 'unknown'));
+                updates.push(attendanceService.updateAttendanceRecord(record.id, newDate, reason, currentUser?.email || 'unknown'));
               }
             }
           }
@@ -309,7 +313,15 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
         confirmText: 'Sí, guardar',
         cancelText: 'Cancelar',
         type: 'primary',
-        isConfirmDisabled: !editReason.trim() // Deshabilitar si no hay motivo
+        // La validación ahora se hace dentro del callback onConfirm,
+        // por lo que no podemos deshabilitar el botón de antemano de forma sencilla.
+        // Se podría implementar un estado local en el componente Modal si fuera crítico,
+        // pero el chequeo al confirmar es suficiente y más simple.
+        // isConfirmDisabled: !editReason.trim() // Ya no se puede usar
+        // Para mantener la funcionalidad, podríamos hacer esto, pero es más complejo:
+        // 1. Pasar un `onInputChange` al modal.
+        // 2. El modal llama a esa función y actualiza un estado en `AttendanceView`.
+        // 3. Usar ese estado para `isConfirmDisabled`.
       }
     );
   };

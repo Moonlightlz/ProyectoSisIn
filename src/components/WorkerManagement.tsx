@@ -568,7 +568,7 @@ const WorkerManagement: React.FC = () => {
             Nuevo Trabajador
           </button>
           <button 
-            className="btn btn-secondary" 
+            className="btn btn-danger" 
             onClick={() => setCurrentView('attendance')}
           >
             Asistencia
