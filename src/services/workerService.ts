@@ -180,6 +180,13 @@ export const workerService = {
   }
 };
 
+interface AttendanceRecordData {
+  id: string;
+  workerId: string;
+  workerName: string;
+  [key: string]: any; // Para otras propiedades
+}
+
 // ===============================
 // OPERACIONES DE ASISTENCIA
 // ===============================
@@ -228,30 +235,45 @@ export const attendanceService = {
   async deleteAttendanceRecords(recordIds: string[], reason: string, deletedBy: string): Promise<void> {
     if (recordIds.length === 0) return;
     try {
-      const batch = writeBatch(db);
-      
-      for (const id of recordIds) {
-        const docRef = doc(db, ATTENDANCE_COLLECTION, id);
-        const docSnap = await getDoc(docRef);
+      // Paso 1: Obtener todos los documentos que se van a eliminar.
+      const recordDocsPromises = recordIds.map(id => getDoc(doc(db, ATTENDANCE_COLLECTION, id)));
+      const recordDocsSnaps = await Promise.all(recordDocsPromises);
+      const existingRecords = recordDocsSnaps.filter(snap => snap.exists()).map(snap => ({ id: snap.id, ...snap.data() } as AttendanceRecordData));
 
-        if (docSnap.exists()) {
-          const recordData = docSnap.data();
-          const logRef = doc(collection(db, ATTENDANCE_LOGS_COLLECTION));
-          
-          // Crear un registro en el log de auditoría
-          batch.set(logRef, {
-            action: 'delete',
-            reason: reason,
-            timestamp: Timestamp.now(),
-            modifiedBy: deletedBy,
-            workerId: recordData.workerId,
-            workerName: recordData.workerName,
-            originalRecord: recordData, // Guardar el registro original
-          });
-
-          // Eliminar el registro original
+      // Paso 2: Agrupar los registros por workerId.
+      const recordsByWorker = existingRecords.reduce((acc, record) => {
+        const workerId = record.workerId;
+        if (!acc[workerId]) {
+          acc[workerId] = [];
         }
-        batch.delete(docRef);
+        acc[workerId].push(record);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Paso 3: Crear un batch para ejecutar todas las operaciones de forma atómica.
+      const batch = writeBatch(db);
+
+      // Paso 4: Por cada trabajador, crear un único log y añadir las eliminaciones al batch.
+      for (const workerId in recordsByWorker) {
+        const workerRecords = recordsByWorker[workerId];
+        const firstRecord = workerRecords[0]; // Usamos el primer registro para obtener datos comunes.
+
+        // Crear un único log de auditoría para este trabajador.
+        const logRef = doc(collection(db, ATTENDANCE_LOGS_COLLECTION));
+        batch.set(logRef, {
+          action: 'delete',
+          reason: reason,
+          timestamp: Timestamp.now(),
+          modifiedBy: deletedBy,
+          workerId: workerId,
+          workerName: firstRecord.workerName,
+          originalRecords: workerRecords, // Guardamos todos los registros eliminados en un array.
+        });
+
+        // Añadir la eliminación de cada registro individual al batch.
+        workerRecords.forEach(record => {
+          batch.delete(doc(db, ATTENDANCE_COLLECTION, record.id));
+        });
       }
       await batch.commit();
     } catch (error) {
@@ -277,6 +299,7 @@ export const attendanceService = {
         modifiedBy: updatedBy,
         workerId: originalData.workerId,
         workerName: originalData.workerName,
+        originalTimestamp: originalData.timestamp // Guardamos el valor anterior para auditoría
       });
 
       await updateDoc(recordRef, {
