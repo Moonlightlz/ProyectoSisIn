@@ -199,7 +199,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
         const reason = reasonInput ? reasonInput.value : '';
 
         if (!reason.trim()) {
-          setDeleteReasonError('Por favor, completa este campo para continuar.');
+          setDeleteReasonError('Completar este campo');
           setLoading(false);
           return false; // No cerrar el modal
         }
