@@ -5,9 +5,9 @@ import { FaArrowLeft, FaEdit, FaHistory, FaTrash, FaSave, FaTimes, FaUserClock, 
 import './AttendanceModal.css';
 import Modal from './Modal'; // Importar el componente Modal
 import { useModal } from '../hooks/useModal'; // Importar el hook para modales
-import AttendanceHistoryView from './AttendanceHistoryView'; // Importar la nueva vista de historial
+import AttendanceHistoryView from './AttendanceHistoryView';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx'; // Para exportar a Excel con formato
 import { useAuth } from '../contexts/AuthContext';
 
@@ -454,27 +454,64 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleExportToPdf = () => {
     setLoading(true);
     try {
-      const doc = new jsPDF();
+      if (displayedAttendance.length === 0) {
+        showError('Sin datos', 'No hay datos para exportar en la vista actual.');
+        setLoading(false);
+        return;
+      }
+
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // 1. Título y subtítulos
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Reporte de Asistencia', pageWidth / 2, 15, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const generationDate = new Date().toLocaleString('es-PE');
+      doc.text(`Fecha del Reporte: ${formattedSelectedDate()}`, pageWidth / 2, 22, { align: 'center' });
+      doc.text(`Generado el: ${generationDate}`, pageWidth / 2, 27, { align: 'center' });
+
+      // 2. Datos para la tabla
       const tableData = displayedAttendance.map(item => [
         item.workerName,
         item.dni,
         getRecordTime(item.records, 'entry'),
-        getRecordTime(item.records, 'break'),
-        getBreakEndTime(item.records),
         getRecordTime(item.records, 'exit'),
         calculateTotalHours(item.records),
       ]);
 
-      doc.text(`Reporte de Asistencia - ${formattedSelectedDate()}`, 14, 15);
-      (doc as any).autoTable({
-        startY: 20,
-        head: [['Empleado', 'DNI', 'Entrada', 'Break Inicio', 'Break Fin', 'Salida', 'Total Horas']],
+      // 3. Generar la tabla
+      autoTable(doc, {
+        startY: 35,
+        head: [['Empleado', 'DNI', 'Entrada', 'Salida', 'Total Horas']],
         body: tableData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [22, 160, 133], // Un color verde azulado
+          textColor: 255,
+          fontStyle: 'bold',
+        },
+        didDrawPage: (data) => { // Usamos el parámetro 'data' que nos provee la librería
+          // 4. Totales al final de la tabla
+          const totalPresentes = displayedAttendance.length;
+          const totalEmpleados = workers.length;
+          const totalAusentes = totalEmpleados - totalPresentes;
+
+          // Usamos el final de la tabla, o un valor por defecto si no está definido.
+          // El operador '??' (Nullish Coalescing) asegura que finalY sea un número.
+          const finalY = data.table.finalY ?? 60; 
+          doc.setFontSize(10);
+          doc.text(`Total de Empleados: ${totalEmpleados}`, 14, finalY + 10);
+          doc.text(`Presentes: ${totalPresentes}`, 14, finalY + 15);
+          doc.text(`Ausentes: ${totalAusentes}`, 14, finalY + 20);
+        }
       });
 
       doc.save(`asistencia_${selectedDate}.pdf`);
       showSuccess('Exportado', 'El archivo de asistencia se ha descargado como PDF.');
-
     } catch (err) {
       console.error('Error al exportar a PDF:', err);
       showError('Error de Exportación', 'No se pudo generar el archivo PDF.');
