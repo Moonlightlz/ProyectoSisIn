@@ -27,9 +27,12 @@ export const useModal = () => {
     showModal({
       title,
       message,
-      onConfirm: () => {
-        onConfirm();
-        hideModal(); // Cierra el modal después de confirmar
+      onConfirm: async () => {
+        const result = await onConfirm();
+        // No cerrar el modal si la función de confirmación devuelve explícitamente `false`.
+        if (result !== false) {
+          hideModal(); // Cierra el modal después de confirmar
+        }
       },
       type: 'confirm',
       confirmText: options.confirmText || 'Confirmar',

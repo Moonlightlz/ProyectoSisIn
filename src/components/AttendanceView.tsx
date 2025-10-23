@@ -42,6 +42,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
   const { modalState, hideModal, showConfirm, showError } = useModal();
   const [deleteReason, setDeleteReason] = useState('');
+  const [editReasonError, setEditReasonError] = useState<string | null>(null);
 
   // Estados para la edición en línea
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
@@ -247,6 +248,9 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleSaveEdit = () => {
     if (!editingRowId) return;
 
+    // Limpiar el error anterior al abrir el modal
+    setEditReasonError(null);
+
     const messageContent = (
       <div>
         <p>¿Estás seguro de realizar esta modificación en los registros de asistencia?</p>
@@ -256,9 +260,15 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
             id="editReason"
             type="text"
             className="form-control"
+            onChange={() => {
+              if (editReasonError) setEditReasonError(null); // Limpiar error al escribir
+            }}
             placeholder="Ej: Corrección de hora de salida, olvido de marcación..."
             autoFocus
           />
+          {editReasonError && (
+            <div style={{ color: 'red', marginTop: '5px', fontSize: '12px' }}>{editReasonError}</div>
+          )}
         </div>
       </div>
     );
@@ -273,9 +283,10 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
         const reason = reasonInput ? reasonInput.value : '';
 
         if (!reason.trim()) {
-          showError('Motivo requerido', 'Debes ingresar un motivo para la modificación.');
+          setEditReasonError('Por favor, completa este campo para continuar.');
           setLoading(false);
-          return; // Detiene la ejecución si no hay motivo
+          // Devolvemos `false` para indicar al hook useModal que NO cierre el modal.
+          return false; 
         }
         try {
           const workerAttendance = attendanceData[editingRowId];
@@ -302,11 +313,13 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           await Promise.all(updates);
           await fetchAttendance(selectedDate); // Recargar datos
           handleCancelEdit(); // Salir del modo edición
+          setLoading(false);
+          return true; // Indicar que la operación fue exitosa y el modal puede cerrarse
         } catch (err) {
           setError('Error al guardar las modificaciones.');
           console.error(err);
-        } finally {
           setLoading(false);
+          return false; // Indicar que hubo un error y el modal no debe cerrarse
         }
       },
       {
