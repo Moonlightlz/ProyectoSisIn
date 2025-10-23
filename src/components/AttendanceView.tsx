@@ -4,8 +4,11 @@ import { Worker } from '../types/payroll';
 import { FaArrowLeft, FaEdit, FaHistory, FaTrash, FaSave, FaTimes, FaUserClock, FaFilePdf, FaFileExcel } from 'react-icons/fa';
 import './AttendanceModal.css';
 import Modal from './Modal'; // Importar el componente Modal
-import { useModal } from '../hooks/useModal'; // Importar el hook para modales
+import { useModal } from '../hooks/useModal';
 import AttendanceHistoryView from './AttendanceHistoryView'; // Importar la nueva vista de historial
+import jsPDF from 'jspdf'; 
+import autoTable from 'jspdf-autotable';
+import Papa from 'papaparse'; // Para exportar a CSV
 import { useAuth } from '../contexts/AuthContext';
 
 interface AttendanceRecord {
@@ -40,7 +43,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
 
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
-  const { modalState, hideModal, showConfirm, showError } = useModal();
+  const { modalState, hideModal, showConfirm, showError, showSuccess } = useModal(); // Aseguramos que showSuccess se extraiga
   const [deleteReasonError, setDeleteReasonError] = useState<string | null>(null);
   const [editReasonError, setEditReasonError] = useState<string | null>(null);
 
@@ -377,6 +380,76 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
     handleDoubleClick(selectedWorkers[0]);
   };
 
+  const handleExportToExcel = () => {
+    setLoading(true);
+    try {
+      const dataToExport = displayedAttendance.map(item => ({
+        'Empleado': item.workerName,
+        'DNI': item.dni,
+        'Fecha': formattedSelectedDate(),
+        'Entrada': getRecordTime(item.records, 'entry'),
+        'Break Inicio': getRecordTime(item.records, 'break'),
+        'Break Fin': getBreakEndTime(item.records),
+        'Salida': getRecordTime(item.records, 'exit'),
+        'Total Horas': calculateTotalHours(item.records),
+      }));
+
+      if (dataToExport.length === 0) {
+        showError('Sin datos', 'No hay datos para exportar en la vista actual.');
+        setLoading(false);
+        return;
+      }
+
+      const csv = Papa.unparse(dataToExport);
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for BOM
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `asistencia_${selectedDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showSuccess('Exportado', 'El archivo de asistencia se ha descargado como CSV.');
+    } catch (err) {
+      console.error('Error al exportar a Excel:', err);
+      showError('Error de Exportación', 'No se pudo generar el archivo Excel.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportToPdf = () => {
+    setLoading(true);
+    try {
+      const doc = new jsPDF();
+      const tableData = displayedAttendance.map(item => [
+        item.workerName,
+        item.dni,
+        getRecordTime(item.records, 'entry'),
+        getRecordTime(item.records, 'break'),
+        getBreakEndTime(item.records),
+        getRecordTime(item.records, 'exit'),
+        calculateTotalHours(item.records),
+      ]);
+
+      doc.text(`Reporte de Asistencia - ${formattedSelectedDate()}`, 14, 15);
+      autoTable(doc, {
+        startY: 20,
+        head: [['Empleado', 'DNI', 'Entrada', 'Break Inicio', 'Break Fin', 'Salida', 'Total Horas']],
+        body: tableData,
+      });
+
+      doc.save(`asistencia_${selectedDate}.pdf`);
+      showSuccess('Exportado', 'El archivo de asistencia se ha descargado como PDF.');
+
+    } catch (err) {
+      console.error('Error al exportar a PDF:', err);
+      showError('Error de Exportación', 'No se pudo generar el archivo PDF.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Si la vista es 'history', renderizamos el componente de historial
   if (currentSubView === 'history') {
     return (
@@ -404,19 +477,15 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           </button>
           <button
             className="btn btn-danger"
-            onClick={() => {
-              console.log('Solicitando exportación a PDF...');
-              // Aquí irá la lógica para generar el PDF
-            }}
+            onClick={handleExportToPdf} // Función ahora definida
+            disabled={loading}
           >
             <FaFilePdf /> Exportar PDF
           </button>
           <button
             className="btn btn-success"
-            onClick={() => {
-              console.log('Solicitando exportación a Excel...');
-              // Aquí irá la lógica para generar el Excel
-            }}
+            onClick={handleExportToExcel} // Función ahora definida
+            disabled={loading}
           >
             <FaFileExcel /> Exportar Excel
           </button>
