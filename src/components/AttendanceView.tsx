@@ -4,11 +4,11 @@ import { Worker } from '../types/payroll';
 import { FaArrowLeft, FaEdit, FaHistory, FaTrash, FaSave, FaTimes, FaUserClock, FaFilePdf, FaFileExcel } from 'react-icons/fa';
 import './AttendanceModal.css';
 import Modal from './Modal'; // Importar el componente Modal
-import { useModal } from '../hooks/useModal';
+import { useModal } from '../hooks/useModal'; // Importar el hook para modales
 import AttendanceHistoryView from './AttendanceHistoryView'; // Importar la nueva vista de historial
-import jsPDF from 'jspdf'; 
-import autoTable from 'jspdf-autotable';
-import Papa from 'papaparse'; // Para exportar a CSV
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx'; // Para exportar a Excel con formato
 import { useAuth } from '../contexts/AuthContext';
 
 interface AttendanceRecord {
@@ -43,7 +43,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const [searchDni, setSearchDni] = useState(''); // Estado para el filtro por DNI
 
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>([]);
-  const { modalState, hideModal, showConfirm, showError, showSuccess } = useModal(); // Aseguramos que showSuccess se extraiga
+  const { modalState, hideModal, showConfirm, showError, showSuccess } = useModal();
   const [deleteReasonError, setDeleteReasonError] = useState<string | null>(null);
   const [editReasonError, setEditReasonError] = useState<string | null>(null);
 
@@ -383,32 +383,65 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleExportToExcel = () => {
     setLoading(true);
     try {
-      const dataToExport = displayedAttendance.map(item => ({
-        'Empleado': item.workerName,
-        'DNI': item.dni,
-        'Fecha': formattedSelectedDate(),
-        'Entrada': getRecordTime(item.records, 'entry'),
-        'Break Inicio': getRecordTime(item.records, 'break'),
-        'Break Fin': getBreakEndTime(item.records),
-        'Salida': getRecordTime(item.records, 'exit'),
-        'Total Horas': calculateTotalHours(item.records),
-      }));
-
-      if (dataToExport.length === 0) {
+      if (displayedAttendance.length === 0) {
         showError('Sin datos', 'No hay datos para exportar en la vista actual.');
         setLoading(false);
         return;
       }
 
-      const csv = Papa.unparse(dataToExport);
-      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for BOM
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `asistencia_${selectedDate}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // 1. Crear el libro de trabajo y la hoja
+      const wb = XLSX.utils.book_new();
+      const ws_name = "Asistencia";
+
+      // 2. Definir los datos y encabezados
+      const headers = ['Empleado', 'DNI', 'Fecha', 'Entrada', 'Break Inicio', 'Break Fin', 'Salida', 'Total de Horas'];
+      const data = displayedAttendance.map(item => [
+        item.workerName,
+        item.dni,
+        formattedSelectedDate(),
+        getRecordTime(item.records, 'entry'),
+        getRecordTime(item.records, 'break'),
+        getBreakEndTime(item.records),
+        getRecordTime(item.records, 'exit'),
+        calculateTotalHours(item.records),
+      ]);
+
+      // 3. Crear la hoja de cálculo con el título y los datos
+      const ws_data = [
+        ["Registros de Asistencia"], // Título
+        [], // Fila vacía
+        headers,
+        ...data
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+      // 4. Aplicar estilos y combinar celdas
+      // Combinar celdas para el título
+      ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+
+      // Estilo para el título (celda A1)
+      ws['A1'].s = {
+        font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "000000" } },
+        alignment: { horizontal: "center", vertical: "center" }
+      };
+
+      // Estilo para los encabezados (fila 3)
+      headers.forEach((_, colIndex) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: 2, c: colIndex });
+        ws[cellAddress].s = {
+          font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "000000" } },
+        };
+      });
+
+      // Ajustar ancho de columnas
+      ws['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 15 }];
+
+      // 5. Añadir la hoja al libro y descargar
+      XLSX.utils.book_append_sheet(wb, ws, ws_name);
+      XLSX.writeFile(wb, `asistencia_${selectedDate}.xlsx`);
+
       showSuccess('Exportado', 'El archivo de asistencia se ha descargado como CSV.');
     } catch (err) {
       console.error('Error al exportar a Excel:', err);
@@ -421,87 +454,23 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
   const handleExportToPdf = () => {
     setLoading(true);
     try {
-      const doc = new jsPDF({ orientation: 'landscape' });
+      const doc = new jsPDF();
       const tableData = displayedAttendance.map(item => [
         item.workerName,
         item.dni,
         getRecordTime(item.records, 'entry'),
-        getRecordTime(item.records, 'exit'), // Corregido para que coincida con la cabecera
+        getRecordTime(item.records, 'break'),
+        getBreakEndTime(item.records),
+        getRecordTime(item.records, 'exit'),
         calculateTotalHours(item.records),
       ]);
 
-      const totalWorkers = displayedAttendance.length;
-      const totalPresent = displayedAttendance.filter(item => item.records.length > 0).length;
-      const totalAbsent = totalWorkers - totalPresent;
-
-      const head = [['Empleado', 'DNI', 'Entrada', 'Salida', 'Total Horas']];
-
-      autoTable(doc, {
-        head: head,
+      doc.text(`Reporte de Asistencia - ${formattedSelectedDate()}`, 14, 15);
+      (doc as any).autoTable({
+        startY: 20,
+        head: [['Empleado', 'DNI', 'Entrada', 'Break Inicio', 'Break Fin', 'Salida', 'Total Horas']],
         body: tableData,
-        startY: 40,
-        theme: 'striped',
-        headStyles: {
-          fillColor: [38, 50, 56], // Un gris oscuro azulado
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245],
-        },
-        didDrawPage: (data) => {
-          // --- ENCABEZADO ---
-          const pageWidth = doc.internal.pageSize.getWidth();
-          doc.setFontSize(18);
-          doc.setTextColor(40);
-          doc.setFont('helvetica', 'bold');
-          doc.text("Reporte de Asistencia", pageWidth / 2, 22, { align: 'center' });
-
-          doc.setFontSize(11);
-          doc.setTextColor(100);
-          doc.setFont('helvetica', 'normal');
-          doc.text(`Fecha: ${formattedSelectedDate()}`, pageWidth / 2, 29, { align: 'center' });
-
-          // --- PIE DE PÁGINA ---
-          const pageCount = doc.getNumberOfPages();
-          doc.setFontSize(8);
-          doc.setTextColor(150);
-          const pageHeight = doc.internal.pageSize.getHeight();
-
-          doc.text(
-            `Página ${data.pageNumber} de ${pageCount}`,
-            data.settings.margin.left,
-            pageHeight - 10 // Usando la variable
-          );
-          doc.text(
-            `Generado el: ${new Date().toLocaleString('es-PE')}`,
-            pageWidth - data.settings.margin.right,
-            pageHeight - 10, // Usando la variable
-            { align: 'right' }
-          );
-        },
       });
-
-      
-      // --- RESUMEN FINAL ---
-      let finalY = (doc as any).lastAutoTable.finalY; // Obtener la posición Y final de la tabla
-      if (finalY > 200) { // Si la tabla es muy larga, pasar a una nueva página
-        doc.addPage();
-        finalY = 20; // Resetear Y para la nueva página
-      }
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text("Resumen del Día", 14, finalY + 20);
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`- Total de Trabajadores: ${totalWorkers}`, 14, finalY + 28);
-      doc.setTextColor(34, 139, 34); // Verde para presentes
-      doc.text(`- Presentes: ${totalPresent}`, 14, finalY + 34);
-      if (totalAbsent > 0) {
-        doc.setTextColor(220, 20, 60); // Rojo para ausentes
-        doc.text(`- Ausentes: ${totalAbsent}`, 14, finalY + 40);
-      }
 
       doc.save(`asistencia_${selectedDate}.pdf`);
       showSuccess('Exportado', 'El archivo de asistencia se ha descargado como PDF.');
@@ -541,14 +510,14 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
           </button>
           <button
             className="btn btn-danger"
-            onClick={handleExportToPdf} // Función ahora definida
+            onClick={handleExportToPdf}
             disabled={loading}
           >
             <FaFilePdf /> Exportar PDF
           </button>
           <button
             className="btn btn-success"
-            onClick={handleExportToExcel} // Función ahora definida
+            onClick={handleExportToExcel}
             disabled={loading}
           >
             <FaFileExcel /> Exportar Excel

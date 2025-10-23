@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaFileExport } from 'react-icons/fa';
+import { FaArrowLeft, FaFilePdf, FaFileExcel } from 'react-icons/fa';
 import { attendanceService } from '../services/workerService';
 import { Worker } from '../types/payroll';
 import './AttendanceHistoryView.css';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { useModal } from '../hooks/useModal';
 
 interface AttendanceLog {
   id: string;
@@ -23,6 +27,7 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showSuccess, showError } = useModal();
   
   // Inicializar fechas al mes actual
   const today = new Date();
@@ -77,6 +82,93 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
     });
   };
 
+  const handleExportToExcel = () => {
+    if (logs.length === 0) {
+      showError('Sin datos', 'No hay registros para exportar.');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws_name = "Historial de Cambios";
+
+    const headers = ['Empleado', 'DNI', 'Fecha y Hora del Cambio', 'Acción', 'Motivo del Cambio', 'Modificado por'];
+    const data = logs.map(log => [
+      log.workerName,
+      getWorkerDni(log.workerId),
+      formatTimestamp(log.timestamp),
+      log.action === 'delete' ? 'Eliminación' : 'Modificación',
+      log.reason,
+      log.modifiedBy,
+    ]);
+
+    const ws_data = [
+      ["Historial de Cambios en Asistencia"],
+      [],
+      headers,
+      ...data
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+    ws['A1'].s = {
+      font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "000000" } },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    headers.forEach((_, colIndex) => {
+      const cellAddress = XLSX.utils.encode_cell({ r: 2, c: colIndex });
+      ws[cellAddress].s = {
+        font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "000000" } },
+      };
+    });
+
+    ws['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 25 }, { wch: 15 }, { wch: 40 }, { wch: 25 }];
+
+    XLSX.utils.book_append_sheet(wb, ws, ws_name);
+    XLSX.writeFile(wb, `historial_asistencia_${startDate}_a_${endDate}.xlsx`);
+    showSuccess('Exportado', 'El historial se ha descargado como archivo Excel.');
+  };
+
+  const handleExportToPdf = () => {
+    if (logs.length === 0) {
+      showError('Sin datos', 'No hay registros para exportar.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const tableData = logs.map(log => [
+      log.workerName,
+      getWorkerDni(log.workerId),
+      formatTimestamp(log.timestamp),
+      log.action === 'delete' ? 'Eliminación' : 'Modificación',
+      log.reason,
+      log.modifiedBy,
+    ]);
+
+    const head = [['Empleado', 'DNI', 'Fecha y Hora', 'Acción', 'Motivo', 'Modificado por']];
+
+    doc.text(`Historial de Cambios en Asistencia`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Periodo: ${startDate} al ${endDate}`, 14, 22);
+
+    autoTable(doc, {
+      head: head,
+      body: tableData,
+      startY: 28,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold',
+      },
+    });
+
+    doc.save(`historial_asistencia_${startDate}_a_${endDate}.pdf`);
+    showSuccess('Exportado', 'El historial se ha descargado como archivo PDF.');
+  };
+
   return (
     <div className="attendance-history-view">
       <div className="header">
@@ -106,8 +198,17 @@ const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({ onBack, w
           <button className="btn btn-primary" onClick={handleSearch} disabled={loading}>
             {loading ? 'Buscando...' : 'Buscar'}
           </button>
-          <button className="btn btn-success">
-            <FaFileExport /> Exportar
+          <button 
+            className="btn btn-danger"
+            onClick={handleExportToPdf}
+          >
+            <FaFilePdf /> Exportar PDF
+          </button>
+          <button 
+            className="btn btn-success"
+            onClick={handleExportToExcel}
+          >
+            <FaFileExcel /> Exportar Excel
           </button>
         </div>
       </div>
