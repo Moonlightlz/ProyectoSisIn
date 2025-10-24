@@ -3,15 +3,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { saleService } from '../services/saleService';
 import { productService } from '../services/productService';
 import ProductManagement from './ProductManagement';
-import NewSaleForm from './NewSaleForm'; // Importamos el formulario de nueva venta
+import NewSaleForm from './NewSaleForm';
+import RawMaterialInventory from './RawMaterialInventory'; // Importamos el nuevo componente
 import './HomePage.css';
-import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaPlus, FaCog, FaChartLine, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaCog, FaChartLine, FaFileInvoiceDollar, FaWarehouse } from 'react-icons/fa';
 
 // Estado de vista actual
 const VIEWS = {
   DASHBOARD: 'dashboard',
   NEW_SALE: 'new_sale',
-  PRODUCTS: 'products'
+  PRODUCTS: 'products',
+  RAW_MATERIAL_INVENTORY: 'raw_material_inventory'
 };
 
 // Componente para mostrar estadísticas resumidas
@@ -235,6 +237,9 @@ function HomePage() {
               loadSales(); 
             }}
           /> );
+      case VIEWS.RAW_MATERIAL_INVENTORY:
+        return <RawMaterialInventory onBack={() => setCurrentView(VIEWS.DASHBOARD)} />;
+
       
       default: // VIEWS.DASHBOARD
         return (
@@ -254,6 +259,13 @@ function HomePage() {
                   disabled={loading}
                 >
                   <FaCog /> Gestionar Productos
+                </button>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentView(VIEWS.RAW_MATERIAL_INVENTORY)}
+                  disabled={loading}
+                >
+                  <FaWarehouse /> Inventario de Materia Prima
                 </button>
                 {sales.length === 0 && (
                   <button 

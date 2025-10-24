@@ -1,0 +1,185 @@
+.inventory-container {
+  padding: 20px;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.inventory-filters {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #475569;
+}
+
+.filter-group select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #fff;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.inventory-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.action-group-left, .action-group-right {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-primary {
+  background-color: #1e293b;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #334155;
+}
+
+.btn-success {
+  background-color: #10b981;
+  color: white;
+}
+.btn-success:hover {
+  background-color: #059669;
+}
+
+.btn-warning {
+  background-color: #f59e0b;
+  color: white;
+}
+.btn-warning:hover {
+  background-color: #d97706;
+}
+
+.btn-info {
+  background-color: #3b82f6;
+  color: white;
+}
+.btn-info:hover {
+  background-color: #2563eb;
+}
+
+.inventory-list {
+  overflow-x: auto;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.inventory-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.stock-indicator {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.stock-indicator.low {
+  color: #ef4444; /* red */
+}
+
+.stock-indicator.medium {
+  color: #f59e0b; /* yellow */
+}
+
+.stock-indicator.high {
+  color: #10b981; /* green */
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-table-action {
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.btn-table-action svg {
+  font-size: 12px;
+}
+
+.btn-details {
+  background-color: #64748b; /* slate-500 */
+}
+
+.btn-details:hover, .btn-edit:hover, .btn-delete:hover, .btn-adjust:hover {
+  background-color: #475569;
+}
+
+.btn-edit {
+  background-color: #f59e0b; /* amber-500 */
+}
+
+.btn-delete {
+  background-color: #ef4444; /* red-500 */
+}
+
+.btn-adjust {
+  background-color: #3b82f6; /* blue-500 */
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* Tooltip para los botones de icono */
+.btn-table-action:not(.btn-adjust) {
+  width: 32px;
+  height: 32px;
+}
+
+.placeholder-view {
+  padding: 40px;
+  text-align: center;
+  background-color: #fff;
+  border: 2px dashed #e2e8f0;
+  border-radius: 8px;
+  margin-top: 20px;
+}

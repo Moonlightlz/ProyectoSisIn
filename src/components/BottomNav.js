@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './BottomNav.css';
-import { FaHome, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import { FaHome, FaUser, FaSignOutAlt, FaBoxes } from 'react-icons/fa';
 
 function BottomNav({ onLogout }) {
   return (
@@ -9,6 +9,10 @@ function BottomNav({ onLogout }) {
       <NavLink to="/" end className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}>
         <FaHome className="nav-icon" />
         <span>Inicio</span>
+      </NavLink>
+      <NavLink to="/inventory" className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}>
+        <FaBoxes className="nav-icon" />
+        <span>Inventario</span>
       </NavLink>
       <NavLink to="/profile" className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}>
         <FaUser className="nav-icon" />
