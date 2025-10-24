@@ -63,7 +63,7 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
       // Usar new Date(`${date}T00:00:00`) para evitar problemas de zona horaria
       const records = await attendanceService.getAttendanceForDay(new Date(`${date}T00:00:00`));
 
-      // Agrupar registros por trabajador
+      // Agrupar registros por trabajador (presentes) y garantizar incluir TODOS los trabajadores activos (ausentes también)
       const grouped: GroupedAttendance = records.reduce((acc, record) => {
         const worker = workers.find(w => w.id === record.workerId);
         if (!acc[record.workerId]) {
@@ -76,6 +76,17 @@ const AttendanceView: React.FC<AttendanceViewProps> = ({ onBack, workers }) => {
         acc[record.workerId].records.push(record);
         return acc;
       }, {} as GroupedAttendance);
+
+      // Asegurar que todos los trabajadores activos aparezcan, aunque no tengan registros (marcarán ausencia)
+      for (const w of workers) {
+        if (!grouped[w.id]) {
+          grouped[w.id] = {
+            workerName: w.name,
+            dni: w.dni,
+            records: [], // sin registros -> ausente
+          };
+        }
+      }
 
       // Ordenar los registros de cada trabajador por hora
       Object.values(grouped).forEach(workerGroup => {
