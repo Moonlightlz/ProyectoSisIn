@@ -231,6 +231,25 @@ export const attendanceService = {
     }
   },
 
+  // Obtener todos los registros de asistencia para un rango de fechas
+  async getAttendanceForDateRange(startDate: Date, endDate: Date): Promise<any[]> {
+    try {
+      const attendanceRef = collection(db, ATTENDANCE_COLLECTION);
+      const q = query(
+        attendanceRef,
+        where('timestamp', '>=', Timestamp.fromDate(startDate)),
+        where('timestamp', '<=', Timestamp.fromDate(endDate)),
+        orderBy('timestamp', 'asc')
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error('Error fetching attendance for date range:', error);
+      throw new Error('No se pudieron cargar los registros de asistencia del rango');
+    }
+  },
+
   // Eliminar múltiples registros de asistencia por sus IDs
   async deleteAttendanceRecords(recordIds: string[], reason: string, deletedBy: string): Promise<void> {
     if (recordIds.length === 0) return;
