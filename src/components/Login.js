@@ -20,6 +20,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   const [dni, setDni] = useState('');
   const [hasMarkedEntry, setHasMarkedEntry] = useState(false);
   const [foundUser, setFoundUser] = useState(null); // Para guardar el usuario encontrado por DNI
+  const [todaysEntry, setTodaysEntry] = useState(null); // Para guardar la entrada de hoy si existe
   const [workers, setWorkers] = useState([]); // Para almacenar la lista de trabajadores
 
   // Hook para el modal de confirmación
@@ -102,12 +103,32 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
 
   // Buscar al usuario cuando el DNI cambia
   useEffect(() => {
-    if (dni.length === 8) {
-      const user = workers.find(worker => worker.dni === dni);
-      setFoundUser(user || null);
-    } else {
-      setFoundUser(null);
-    }
+    const findUserAndCheckAttendance = async () => {
+      if (dni.length === 8) {
+        const user = workers.find(worker => worker.dni === dni);
+        setFoundUser(user || null);
+
+        if (user) {
+          // Verificar si ya hay una entrada registrada para hoy
+          try {
+            const todayRecords = await attendanceService.getAttendanceForDay(new Date());
+            const entryRecord = todayRecords.find(
+              record => record.workerId === user.id && record.type === 'entry'
+            );
+            setTodaysEntry(entryRecord || null);
+          } catch (err) {
+            console.error("Error al verificar asistencia de hoy:", err);
+            setTodaysEntry(null); // Asumir que no hay registro si hay error
+          }
+        } else {
+          setTodaysEntry(null);
+        }
+      } else {
+        setFoundUser(null);
+        setTodaysEntry(null);
+      }
+    };
+    findUserAndCheckAttendance();
   }, [dni, workers]);
 
   // --- Lógica para la Interfaz de Asistencia ---
@@ -149,6 +170,12 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
       setNotification({ type: 'error', message: 'Usuario no encontrado. Verifica el DNI.' });
       return;
     }
+
+    if (todaysEntry) {
+      setError('Asistencia ya registrada para hoy.');
+      return;
+    }
+
     showConfirm(
       'Confirmar Entrada',
       '¿Estás seguro que quieres marcar tu entrada?',
@@ -165,6 +192,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
           setTimeout(() => {
             showSuccess('Entrada Registrada', 'Se marcó tu entrada correctamente.');
             setHasMarkedEntry(true);
+            setTodaysEntry({ DUMMY: true }); // Marcar que ya hay entrada para evitar doble registro inmediato
           }, 100);
         } catch (err) {
           console.error('Error al registrar la entrada:', err);
@@ -205,9 +233,10 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   };
 
   // Limpia la notificación después de unos segundos
-  if (notification) {
-    setTimeout(() => setNotification(''), 3000);
-  }
+  useEffect(() => {
+    if (error) setTimeout(() => setError(''), 4000);
+    if (notification) setTimeout(() => setNotification(''), 3000);
+  }, [error, notification]);
 
   if (isAsistenciaMode) {
     return (
@@ -218,6 +247,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
         <div className="login-form-section">
           <div className="asistencia-form">
             <h2>Registro de Asistencia</h2>
+            {error && <p className="error-message" style={{ marginBottom: '15px' }}>{error}</p>}
             {notification && <p className={`notification-message ${notification.type}`}>{notification.message}</p>}
             <div className="form-group">
               <label htmlFor="dni">Número de DNI:</label>
@@ -227,6 +257,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
                 value={dni}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, ''); // Solo permite números
+                  if (error) setError(''); // Limpiar error al escribir
                   setDni(value);
                 }}
                 placeholder="Ingresa tu DNI"
@@ -235,7 +266,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
             </div>
             <div className="user-display-container">
               {foundUser && <p className="found-user-name">Hola, {foundUser.name}</p>}
-              {dni.length === 8 && !foundUser && <p className="user-not-found-message">Usuario no encontrado</p>}
+              {dni.length === 8 && !foundUser && !loading && <p className="user-not-found-message">Usuario no encontrado</p>}
             </div>
 
             <button type="button" className="asistencia-button-action entrada" onClick={handleEntrada}>
