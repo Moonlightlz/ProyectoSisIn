@@ -3,9 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { saleService } from '../services/saleService';
 import { productService } from '../services/productService';
 import ProductManagement from './ProductManagement';
-import NewSaleForm from './NewSaleForm';
+import NewSaleForm from './NewSaleForm'; // Importamos el formulario de nueva venta
 import './HomePage.css';
-import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaPlus, FaCog, FaChartLine } from 'react-icons/fa';
+import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaPlus, FaCog, FaChartLine, FaFileInvoiceDollar } from 'react-icons/fa';
 
 // Estado de vista actual
 const VIEWS = {
@@ -17,9 +17,12 @@ const VIEWS = {
 // Componente para mostrar estadísticas resumidas
 const SalesStats = ({ sales }) => {
   const totalSales = sales.length;
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-  const pendingSales = sales.filter(sale => sale.status === 'Pendiente').length;
-  const completedSales = sales.filter(sale => sale.status === 'Entregado').length;
+  const totalRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);  
+  // Corregido para no ser sensible a mayúsculas/minúsculas
+  const pendingSales = sales.filter(sale => sale.status.toLowerCase() === 'pendiente').length;
+  const completedSales = sales.filter(sale => sale.status.toLowerCase() === 'entregado').length;
+  const inProcessSales = sales.filter(sale => sale.status.toLowerCase().replace('_', ' ') === 'en proceso').length;
+
 
   return (
     <div className="stats-grid">
@@ -37,7 +40,7 @@ const SalesStats = ({ sales }) => {
           <FaDollarSign />
         </div>
         <div className="stat-content">
-          <h3>S/ {totalRevenue.toFixed(2)}</h3>
+          <h3>S/ {totalRevenue.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
           <p>Ingresos Totales</p>
         </div>
       </div>
@@ -46,7 +49,7 @@ const SalesStats = ({ sales }) => {
           <FaBoxOpen />
         </div>
         <div className="stat-content">
-          <h3>{pendingSales}</h3>
+          <h3>{pendingSales + inProcessSales}</h3>
           <p>Ventas Pendientes</p>
         </div>
       </div>
@@ -159,13 +162,14 @@ function HomePage() {
   const [sales, setSales] = useState([]);
   const [selectedSale, setSelectedSale] = useState(null);
   const [loading, setLoading] = useState(false);
-
+  
   // Cargar ventas
   const loadSales = async () => {
     try {
       setLoading(true);
       const salesData = await saleService.getRecentSales();
       setSales(salesData);
+
     } catch (error) {
       console.error('Error cargando ventas:', error);
       alert('Error al cargar las ventas');
@@ -216,7 +220,6 @@ function HomePage() {
     }
   };
 
-
   // Renderizar vista actual
   const renderCurrentView = () => {
     switch (currentView) {
@@ -224,15 +227,14 @@ function HomePage() {
         return <ProductManagement onBack={() => setCurrentView(VIEWS.DASHBOARD)} />;
       
       case VIEWS.NEW_SALE:
-        return (
-          <NewSaleForm 
+        // Renderizamos el componente del formulario directamente
+        return ( <NewSaleForm 
             onBack={() => setCurrentView(VIEWS.DASHBOARD)}
-            onSaleCreated={() => {
-              setCurrentView(VIEWS.DASHBOARD);
-              loadSales(); // Recargar ventas después de crear una nueva
+            onSaleCreated={() => { 
+              setCurrentView(VIEWS.DASHBOARD); 
+              loadSales(); 
             }}
-          />
-        );
+          /> );
       
       default: // VIEWS.DASHBOARD
         return (
@@ -243,9 +245,8 @@ function HomePage() {
                 <button 
                   className="btn btn-primary"
                   onClick={() => setCurrentView(VIEWS.NEW_SALE)}
-                  disabled={loading}
                 >
-                  <FaPlus /> Nueva Venta
+                  <FaFileInvoiceDollar /> Nueva Venta
                 </button>
                 <button 
                   className="btn btn-secondary"
@@ -277,7 +278,6 @@ function HomePage() {
             {/* Estadísticas resumidas */}
             <SalesStats sales={sales} />
 
-            
             {sales.length > 0 ? (
               <>
                 <div className="sales-section">
