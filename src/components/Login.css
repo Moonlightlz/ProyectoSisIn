@@ -4,8 +4,8 @@
 .login-split-container {
   display: flex;
   width: 100%;
-  min-height: 100vh;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh; 
+  font-family: 'Poppins', sans-serif; /* Aplicamos Poppins a todo el contenedor */
 }
 
 /* Sección de la imagen (izquierda) */
@@ -53,15 +53,16 @@
 
 .login-form h2 {
   /* --- Estilos profesionales para el título --- */
+  font-family: 'Poppins', sans-serif; /* Aseguramos Poppins para el título */
   margin-bottom: 8px; /* Reducimos el margen inferior */
   color: #1e293b; /* Un color oscuro más moderno (azul-gris) */
   font-size: 22px; /* Reducimos el tamaño del título */
   font-weight: 700; /* Más grueso (bold) */
   letter-spacing: -0.5px; /* Un espaciado entre letras más ajustado */
 }
-
 .login-form .form-subtitle {
   /* --- Estilos profesionales para el subtítulo --- */
+  font-family: 'Poppins', sans-serif; /* Aseguramos Poppins para el subtítulo */
   margin-top: 0; /* Lo acercamos al título */
   margin-bottom: 30px; /* Más espacio antes de los campos */
   color: #42546d; /* Un gris-azulado más suave */
@@ -77,6 +78,7 @@
 .form-group label {
   display: block;
   margin-bottom: 8px;
+  font-family: 'Poppins', sans-serif; /* Aseguramos Poppins para las etiquetas */
   color: #555;
   font-size: 14px; /* Reducimos el tamaño de la etiqueta */
   font-weight: 500;
@@ -273,12 +275,14 @@
 
 .asistencia-form h2 {
   margin-bottom: 30px;
+  font-family: 'Poppins', sans-serif; /* Aplicamos Poppins al título de asistencia */
   color: #333;
   font-size: 28px;
   font-weight: 600;
 }
 
 .asistencia-form input[type="text"] {
+  font-family: 'Poppins', sans-serif; /* Aplicamos Poppins a los inputs de asistencia */
   width: 100%;
   padding: 12px 15px;
   border: 1px solid #ddd;
