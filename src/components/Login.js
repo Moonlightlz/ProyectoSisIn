@@ -171,7 +171,10 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
       return;
     }
 
-    
+    if (todaysEntry) {
+      setError('Asistencia ya registrada para hoy.');
+      return;
+    }
 
     showConfirm(
       'Confirmar Entrada',
