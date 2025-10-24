@@ -298,7 +298,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
           </form>
           {/* Botón de Asistencia fuera del formulario */}
           <button type="button" className="login-button asistencia-button-outside" onClick={() => setAsistenciaMode(true)}>
-            Asistencia
+            Asistencia Trabajador
           </button>
         </div>
       </div>
