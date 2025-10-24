@@ -21,13 +21,6 @@
   gap: 30px;
 }
 
-/* Estilo para que un elemento ocupe toda la fila en el grid */
-@media (min-width: 1024px) {
-  .full-width-chart {
-    grid-column: 1 / -1;
-  }
-}
-
 .stats-section {
   margin-bottom: 40px;
 }
@@ -179,3 +172,114 @@
   align-items: center;
   gap: 10px;
 }
+
+/* Estilos para la tarjeta de candidatos a bono */
+.bonus-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  grid-column: 1 / -1; /* Ocupa todo el ancho */
+  transition: all 0.3s ease;
+}
+
+.bonus-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.bonus-card h3 {
+  font-size: 1.5rem;
+  color: #334155;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 15px;
+}
+
+.candidates-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.candidates-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.candidates-list li:last-child {
+  border-bottom: none;
+}
+
+.candidate-name { font-weight: 600; color: #1e293b; }
+.candidate-hours { font-weight: 700; color: #10b981; background-color: #ecfdf5; padding: 4px 8px; border-radius: 6px; }
+.no-candidates { color: #64748b; text-align: center; padding: 20px; }
+
+/* Estilos para la nueva tabla de horas de trabajadores */
+.worker-hours-card {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  grid-column: 1 / -1; /* Ocupa todo el ancho */
+  transition: all 0.3s ease;
+}
+
+.worker-hours-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.worker-hours-card h3 {
+  font-size: 1.5rem;
+  color: #334155;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.worker-hours-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.worker-hours-table th, .worker-hours-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.worker-hours-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar-container {
+  flex-grow: 1;
+  height: 10px;
+  background-color: #e2e8f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.5s ease-in-out;
+}
+
+.progress-bar.good { background-color: #10b981; } /* Verde */
+.progress-bar.regular { background-color: #3b82f6; } /* Azul */

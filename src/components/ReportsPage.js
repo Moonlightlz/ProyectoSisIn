@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { saleService } from '../services/saleService';
 import { workerService, attendanceService } from '../services/workerService';
-import { FaExclamationCircle, FaChartPie, FaChartBar } from 'react-icons/fa';
+import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar } from 'react-icons/fa';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import './ReportsPage.css';
@@ -213,12 +213,12 @@ const BestSellingProductsChart = ({ sales }) => {
   );
 };
 
-// --- NUEVO GRÁFICO DE HORAS TRABAJADAS POR TRABAJADOR ---
-const WorkerHoursChart = ({ attendance, workers }) => {
+// --- NUEVA TABLA DE HORAS TRABAJADAS POR EMPLEADO ---
+const WorkerHoursTable = ({ attendance, workers }) => {
   if (!attendance || attendance.length === 0) {
     return (
-      <div className="chart-card">
-        <h3><FaChartBar /> Horas Trabajadas por Empleado (Mes Actual)</h3>
+      <div className="worker-hours-card">
+        <h3><FaChartBar /> Rendimiento de Empleados (Mes Actual)</h3>
         <div className="no-data-message">
           <FaExclamationCircle size={30} />
           <p>No hay registros de asistencia para este mes.</p>
@@ -227,83 +227,110 @@ const WorkerHoursChart = ({ attendance, workers }) => {
     );
   }
 
-  // Agrupar registros por trabajador
   const hoursByWorker = attendance.reduce((acc, record) => {
-    if (!acc[record.workerId]) {
-      acc[record.workerId] = {
-        name: record.workerName,
-        records: [],
-      };
-    }
+    if (!acc[record.workerId]) acc[record.workerId] = { name: record.workerName, records: [] };
     acc[record.workerId].records.push(record);
     return acc;
   }, {});
 
-  // Calcular horas totales por trabajador
-  const workerHoursData = Object.values(hoursByWorker).map((workerData) => {
-    const entry = workerData.records.find(r => r.type === 'entry');
-    const exit = workerData.records.find(r => r.type === 'exit');
+  const workerHoursData = Object.values(hoursByWorker).map(workerData => {
     let totalHours = 0;
+    const dailyRecords = {};
 
-    if (entry && exit) {
-      const entryTime = entry.timestamp.toDate().getTime();
-      const exitTime = exit.timestamp.toDate().getTime();
-      let durationMillis = exitTime - entryTime;
+    (workerData.records || []).forEach(record => {
+      const dateStr = record.timestamp.toDate().toISOString().split('T')[0];
+      if (!dailyRecords[dateStr]) dailyRecords[dateStr] = [];
+      dailyRecords[dateStr].push(record);
+    });
 
-      // Asumir un descanso de 45 minutos si hay registro de break
-      if (workerData.records.some(r => r.type === 'break')) {
-        durationMillis -= (45 * 60 * 1000);
+    Object.values(dailyRecords).forEach((dayRecords) => {
+      const entry = dayRecords.find(r => r.type === 'entry');
+      const exit = dayRecords.find(r => r.type === 'exit');
+      if (entry && exit) {
+        const entryTime = entry.timestamp.toDate().getTime();
+        const exitTime = exit.timestamp.toDate().getTime();
+        let durationMillis = exitTime - entryTime;
+        if (dayRecords.some(r => r.type === 'break')) {
+          durationMillis -= (45 * 60 * 1000);
+        }
+        totalHours += Math.max(0, durationMillis / (1000 * 60 * 60));
       }
-
-      totalHours = Math.max(0, durationMillis / (1000 * 60 * 60));
-    }
-
+    });
+    const workedDays = Object.keys(dailyRecords).length;
     return {
       name: workerData.name,
       hours: totalHours,
+      workedDays: workedDays,
+      avgHours: workedDays > 0 ? totalHours / workedDays : 0,
     };
-  }).sort((a, b) => b.hours - a.hours); // Ordenar de mayor a menor
+  }).sort((a, b) => b.hours - a.hours);
 
-  const data = {
-    labels: workerHoursData.map(w => w.name),
-    datasets: [
-      {
-        label: 'Horas Trabajadas',
-        data: workerHoursData.map(w => w.hours.toFixed(2)),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-        borderColor: 'rgba(59, 130, 246, 1)',
-        borderWidth: 1,
-        borderRadius: 4,
-      },
-    ],
-  };
-
-  const options = {
-    indexAxis: 'y',
-    responsive: true,
-    plugins: {
-      legend: { display: false },
-      title: {
-        display: true,
-        text: 'Horas Trabajadas por Empleado (Mes Actual)',
-        font: { size: 16, family: "'Poppins', sans-serif" },
-        color: '#334155',
-      },
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: 'Total de Horas'
-        }
-      }
-    }
-  };
+  // Asumimos 8 horas diarias como meta
+  const maxHoursGoal = Math.max(...workerHoursData.map(w => w.hours), 8 * 22);
 
   return (
-    <div className="chart-card full-width-chart">
-      <h3><FaChartBar /> Horas por Empleado</h3>
-      <Bar data={data} options={options} />
+    <div className="worker-hours-card">
+      <h3><FaChartBar /> Rendimiento de Empleados (Mes Actual)</h3>
+      <table className="worker-hours-table">
+        <thead>
+          <tr>
+            <th>Empleado</th>
+            <th>Horas Totales</th>
+            <th>Días Trab.</th>
+            <th>Promedio Diario</th>
+          </tr>
+        </thead>
+        <tbody>
+          {workerHoursData.map(worker => (
+            <tr key={worker.name}>
+              <td>{worker.name}</td>
+              <td className="progress-cell">
+                <div className="progress-bar-container">
+                  <div 
+                    className={`progress-bar ${worker.avgHours >= 8 ? 'good' : 'regular'}`}
+                    style={{ width: `${(worker.hours / maxHoursGoal) * 100}%` }}
+                  ></div>
+                </div>
+                <span>{worker.hours.toFixed(1)}h</span>
+              </td>
+              <td>{worker.workedDays}</td>
+              <td>{worker.avgHours.toFixed(1)}h</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// --- NUEVA LISTA DE CANDIDATOS A BONO ---
+const BonusCandidates = ({ workerHoursData }) => {
+  if (!workerHoursData || workerHoursData.length === 0) {
+    return null;
+  }
+
+  const candidates = workerHoursData.filter(worker => worker.hours > 48);
+
+  if (candidates.length === 0) {
+    return (
+      <div className="bonus-card">
+        <h3><FaStar /> Candidatos a Bono por Horas Extra</h3>
+        <p className="no-candidates">Nadie ha superado las 48 horas este mes.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bonus-card">
+      <h3><FaStar /> Candidatos a Bono por Horas Extra</h3>
+      <ul className="candidates-list">
+        {candidates.map(candidate => (
+          <li key={candidate.name}>
+            <span className="candidate-name">{candidate.name}</span>
+            <span className="candidate-hours">{candidate.hours.toFixed(1)} horas</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
@@ -315,6 +342,7 @@ function ReportsPage() {
   const [workers, setWorkers] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [workerHoursData, setWorkerHoursData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -335,6 +363,44 @@ function ReportsPage() {
         setSales(salesData);
         setWorkers(workersData);
         setAttendance(attendanceData);
+
+        // --- RE-CALCULATE workerHoursData here to pass to BonusCandidates ---
+        const hoursByWorker = attendanceData.reduce((acc, record) => {
+          if (!acc[record.workerId]) {
+            acc[record.workerId] = { name: record.workerName, records: [] };
+          }
+          acc[record.workerId].records.push(record);
+          return acc;
+        }, {});
+
+        const calculatedHoursData = Object.values(hoursByWorker).map(workerData => {
+          let totalHours = 0;
+          const dailyRecords = {};
+          (workerData.records || []).forEach(record => {
+            const dateStr = record.timestamp.toDate().toISOString().split('T')[0];
+            if (!dailyRecords[dateStr]) dailyRecords[dateStr] = [];
+            dailyRecords[dateStr].push(record);
+          });
+
+          Object.values(dailyRecords).forEach((dayRecords) => {
+            const entry = dayRecords.find(r => r.type === 'entry');
+            const exit = dayRecords.find(r => r.type === 'exit');
+            if (entry && exit) {
+              let durationMillis = exit.timestamp.toDate().getTime() - entry.timestamp.toDate().getTime();
+              if (dayRecords.some(r => r.type === 'break')) {
+                durationMillis -= (45 * 60 * 1000);
+              }
+              totalHours += Math.max(0, durationMillis / (1000 * 60 * 60));
+            }
+          });
+
+          return {
+            name: workerData.name,
+            hours: totalHours,
+            workedDays: Object.keys(dailyRecords).length,
+          };
+        });
+        setWorkerHoursData(calculatedHoursData);
       } catch (error) {
         console.error("Error al cargar datos para reportes:", error);
         alert("No se pudieron cargar los datos para los reportes.");
@@ -356,8 +422,9 @@ function ReportsPage() {
       <div className="charts-grid">
         <SalesChart sales={sales} />
         <WorkerChart workers={workers} />
-        <WorkerHoursChart attendance={attendance} workers={workers} />
         <BestSellingProductsChart sales={sales} />
+        <WorkerHoursTable attendance={attendance} workers={workers} />
+        <BonusCandidates workerHoursData={workerHoursData} />
       </div>
     </div>
   );
