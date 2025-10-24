@@ -129,7 +129,7 @@
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 16px; /* Reducimos el tamaño del texto del botón */
+  font-size: 15px; /* Reducimos el tamaño del texto del botón */
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
@@ -302,7 +302,7 @@
   padding: 14px;
   border: none;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
@@ -310,14 +310,14 @@
   color: white;
 }
 
-.asistencia-button-action.entrada { background-color: #28a745; } /* Verde */
-.asistencia-button-action.entrada:hover { background-color: #218838; }
+.asistencia-button-action.entrada { background-color: #000; color: #fff; } /* Negro */
+.asistencia-button-action.entrada:hover { background-color: #39cc39; }
 
-.asistencia-button-action.salida { background-color: #dc3545; } /* Rojo */
-.asistencia-button-action.salida:hover { background-color: #c82333; }
+.asistencia-button-action.salida { background-color: #000; color: #fff; } /* Negro */
+.asistencia-button-action.salida:hover { background-color: #fd1f1f; }
 
-.asistencia-button-action.break { background-color: #ffc107; } /* Amarillo */
-.asistencia-button-action.break:hover { background-color: #e0a800; }
+.asistencia-button-action.break { background-color: #000; color: #fff; } /* Negro */
+.asistencia-button-action.break:hover { background-color: #d4ee3e; }
 
 .back-to-login-button {
   background: none;
