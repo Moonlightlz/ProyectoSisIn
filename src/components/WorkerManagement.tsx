@@ -589,11 +589,6 @@ const WorkerManagement: React.FC = () => {
                 <p>DNI: {worker.dni}</p>
                 <p>Cargo: {worker.position}</p>
                 <p>Sueldo Base: {formatCurrency(worker.baseSalary)}</p>
-                {/* Debug info */}
-                <small style={{color: '#666', fontSize: '10px'}}>
-                  Debug: currentSalary={worker.currentSalary || 'undefined'}, 
-                  hasAdjustment={worker.lastSalaryAdjustment ? 'yes' : 'no'}
-                </small>
                 {worker.currentSalary && worker.currentSalary !== worker.baseSalary && (
                   <div className="salary-adjustment-info">
                     <p className="current-salary">
