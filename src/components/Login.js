@@ -21,6 +21,8 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   const [hasMarkedEntry, setHasMarkedEntry] = useState(false);
   const [foundUser, setFoundUser] = useState(null); // Para guardar el usuario encontrado por DNI
   const [todaysEntry, setTodaysEntry] = useState(null); // Para guardar la entrada de hoy si existe
+  const [todaysBreak, setTodaysBreak] = useState(null); // Para guardar el break de hoy si existe
+  const [todaysExit, setTodaysExit] = useState(null); // Para guardar la salida de hoy si existe
   const [workers, setWorkers] = useState([]); // Para almacenar la lista de trabajadores
 
   // Hook para el modal de confirmación
@@ -109,23 +111,37 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
         setFoundUser(user || null);
 
         if (user) {
-          // Verificar si ya hay una entrada registrada para hoy
+          // Verificar si ya hay registros para hoy
           try {
             const todayRecords = await attendanceService.getAttendanceForDay(new Date());
             const entryRecord = todayRecords.find(
               record => record.workerId === user.id && record.type === 'entry'
             );
+            const breakRecord = todayRecords.find(
+              record => record.workerId === user.id && record.type === 'break'
+            );
+            const exitRecord = todayRecords.find(
+              record => record.workerId === user.id && record.type === 'exit'
+            );
             setTodaysEntry(entryRecord || null);
+            setTodaysBreak(breakRecord || null);
+            setTodaysExit(exitRecord || null);
           } catch (err) {
             console.error("Error al verificar asistencia de hoy:", err);
             setTodaysEntry(null); // Asumir que no hay registro si hay error
+            setTodaysBreak(null);
+            setTodaysExit(null);
           }
         } else {
           setTodaysEntry(null);
+          setTodaysBreak(null);
+          setTodaysExit(null);
         }
       } else {
         setFoundUser(null);
         setTodaysEntry(null);
+        setTodaysBreak(null);
+        setTodaysExit(null);
       }
     };
     findUserAndCheckAttendance();
@@ -138,6 +154,12 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
       setNotification({ type: 'error', message: 'Usuario no encontrado. Verifica el DNI.' });
       return;
     }
+
+    if (todaysBreak) {
+      setError('Ya has marcado tu break por hoy.');
+      return;
+    }
+
     showConfirm(
       'Confirmar Break',
       '¿Estás seguro que quieres marcar tu break?',
@@ -150,10 +172,11 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
             timestamp: new Date(),
           });
 
-          // El hideModal() se ejecuta primero desde useModal,
-          // luego mostramos el mensaje de éxito.
-          // El showSuccess ahora se cierra solo.
-          setTimeout(() => showSuccess('Break Registrado', 'Se marcó tu break correctamente.'), 100);
+          setTimeout(() => {
+            showSuccess('Break Registrado', 'Se marcó tu break correctamente.');
+            // Marcar que ya hay break para evitar doble registro inmediato
+            setTodaysBreak({ DUMMY: true });
+          }, 100);
         } catch (err) {
           console.error('Error al registrar el break:', err);
           showError('Error de Registro', 'No se pudo guardar el registro de break.');
@@ -207,6 +230,12 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
       setNotification({ type: 'error', message: 'Usuario no encontrado. Verifica el DNI.' });
       return;
     }
+
+    if (todaysExit) {
+      setError('Ya has marcado tu salida por hoy.');
+      return;
+    }
+
     showConfirm(
       'Confirmar Salida',
       '¿Estás seguro que quieres marcar tu salida?',
@@ -223,6 +252,8 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
           setTimeout(() => {
             showSuccess('Salida Registrada', 'Se marcó tu salida correctamente.');
             setHasMarkedEntry(false);
+            // Marcar que ya hay salida para evitar doble registro inmediato
+            setTodaysExit({ DUMMY: true });
           }, 100);
         } catch (err) {
           console.error('Error al registrar la salida:', err);
