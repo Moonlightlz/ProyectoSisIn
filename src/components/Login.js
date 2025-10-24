@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import Modal from './Modal';
 import { useModal } from './useModal'; // Corregido para consistencia
 import { workerService, attendanceService } from '../services/workerService'; // Importamos el servicio de trabajadores y asistencia
+import { FaEnvelope, FaLock } from 'react-icons/fa'; // Importamos los iconos
 
 function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   const [email, setEmail] = useState('');
@@ -23,6 +24,12 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
 
   // Hook para el modal de confirmación
   const { modalState, hideModal, showConfirm, showSuccess, showError } = useModal();
+
+  // 2. Creamos el objeto de estilo para la imagen de fondo
+  const imageSectionStyle = { 
+    // Usamos process.env.PUBLIC_URL para obtener la ruta a la carpeta 'public'
+    backgroundImage: `url(${process.env.PUBLIC_URL}/assets/login-background.jpg)` 
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault(); // Previene el comportamiento por defecto del formulario
@@ -204,79 +211,97 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
 
   if (isAsistenciaMode) {
     return (
-      <div className="login-container">
-        <div className="asistencia-form">
-          <h2>Registro de Asistencia</h2>
-          {notification && <p className={`notification-message ${notification.type}`}>{notification.message}</p>}
-          <div className="form-group">
-            <label htmlFor="dni">Número de DNI:</label>
-            <input
-              type="text"
-              id="dni"
-              value={dni}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, ''); // Solo permite números
-                setDni(value);
-              }}
-              placeholder="Ingresa tu DNI"
-              maxLength="8"
-            />
-          </div>
-          <div className="user-display-container">
-            {foundUser && <p className="found-user-name">Hola, {foundUser.name}</p>}
-            {dni.length === 8 && !foundUser && <p className="user-not-found-message">Usuario no encontrado</p>}
-          </div>
-
-          <button type="button" className="asistencia-button-action entrada" onClick={handleEntrada}>
-            Marcar Entrada
-          </button>
-          <button type="button" className="asistencia-button-action break" onClick={handleBreak}>
-            Break
-          </button>
-          <button type="button" className="asistencia-button-action salida" onClick={handleSalida}>
-            Marcar Salida
-          </button>
-          <button type="button" className="back-to-login-button" onClick={() => setAsistenciaMode(false)}>
-            ‹ Volver al Login
-          </button>
+      <div className="login-split-container">
+        <div className="login-image-section" style={imageSectionStyle}>
+          {/* El fondo ahora se aplica vía style */}
         </div>
-        {/* Renderizamos el Modal aquí */}
-        <Modal
-          isOpen={modalState.isOpen}
-          onClose={hideModal}
-          onConfirm={modalState.onConfirm}
-          title={modalState.title}
-          message={modalState.message}
-          type={modalState.type}
-          confirmText={modalState.confirmText}
-          cancelText={modalState.cancelText}
-        />
+        <div className="login-form-section">
+          <div className="asistencia-form">
+            <h2>Registro de Asistencia</h2>
+            {notification && <p className={`notification-message ${notification.type}`}>{notification.message}</p>}
+            <div className="form-group">
+              <label htmlFor="dni">Número de DNI:</label>
+              <input
+                type="text"
+                id="dni"
+                value={dni}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ''); // Solo permite números
+                  setDni(value);
+                }}
+                placeholder="Ingresa tu DNI"
+                maxLength="8"
+              />
+            </div>
+            <div className="user-display-container">
+              {foundUser && <p className="found-user-name">Hola, {foundUser.name}</p>}
+              {dni.length === 8 && !foundUser && <p className="user-not-found-message">Usuario no encontrado</p>}
+            </div>
+
+            <button type="button" className="asistencia-button-action entrada" onClick={handleEntrada}>
+              Marcar Entrada
+            </button>
+            <button type="button" className="asistencia-button-action break" onClick={handleBreak}>
+              Break
+            </button>
+            <button type="button" className="asistencia-button-action salida" onClick={handleSalida}>
+              Marcar Salida
+            </button>
+            <button type="button" className="back-to-login-button" onClick={() => setAsistenciaMode(false)}>
+              ‹ Volver al Login
+            </button>
+          </div>
+          {/* Renderizamos el Modal aquí */}
+          <Modal
+            isOpen={modalState.isOpen}
+            onClose={hideModal}
+            onConfirm={modalState.onConfirm}
+            title={modalState.title}
+            message={modalState.message}
+            type={modalState.type}
+            confirmText={modalState.confirmText}
+            cancelText={modalState.cancelText}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="login-container">
-      <form className="login-form" onSubmit={handleSubmit}>
-        <h2>Iniciar Sesión</h2>
-        <p className="form-subtitle">Gestión de Pagos e Historiales</p>
-        {error && <p className="error-message">{error}</p>}
-        <div className="form-group">
-          <label htmlFor="email">Correo Electrónico:</label>
-          <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="tu@empresa.com" />
+    <div className="login-split-container">
+      <div className="login-image-section" style={imageSectionStyle}>
+        {/* El fondo ahora se aplica vía style */}
+      </div>
+      <div className="login-form-section">
+        <div className="login-form-wrapper">
+          <form className="login-form" onSubmit={handleSubmit}>
+            <h2>Iniciar Sesión</h2>
+            <p className="form-subtitle">Gestión de Pagos e Historiales</p>
+            {error && <p className="error-message">{error}</p>}
+            <div className="form-group">
+              <label htmlFor="email">Correo Electrónico:</label>
+              <div className="input-with-icon">
+                <FaEnvelope className="icon" />
+                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="tu@empresa.com" />
+              </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="password">Contraseña:</label>
+              <div className="input-with-icon">
+                <FaLock className="icon" />
+                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
+              </div>
+            </div>
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? 'Iniciando sesión...' : 'Entrar'}
+            </button>
+          </form>
+          {/* Botón de Asistencia fuera del formulario */}
+          <button type="button" className="login-button asistencia-button-outside" onClick={() => setAsistenciaMode(true)}>
+            Asistencia
+          </button>
         </div>
-        <div className="form-group">
-          <label htmlFor="password">Contraseña:</label>
-          <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
-        </div>
-        <button type="submit" className="login-button" disabled={loading}>
-          {loading ? 'Iniciando sesión...' : 'Entrar'}
-        </button>
-      </form>
-      {/* Botón de Asistencia fuera del formulario */}
-      <button type="button" className="login-button asistencia-button-outside" onClick={() => setAsistenciaMode(true)}>
-        Asistencia
-      </button>
+      </div>
     </div>
   );
 }

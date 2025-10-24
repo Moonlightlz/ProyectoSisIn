@@ -1,12 +1,35 @@
-/* Estilos generales para el contenedor del login */
-.login-container {
+/* --- NUEVOS ESTILOS PARA EL DISEÑO MODERNO --- */
+
+/* Contenedor principal de pantalla dividida */
+.login-split-container {
   display: flex;
-  flex-direction: column; /* Apila los elementos verticalmente */
+  width: 100%;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Sección de la imagen (izquierda) */
+.login-image-section {
+  flex: 1;
+  background-size: cover;
+  background-position: center;
+  display: none; /* Oculto en móviles */
+}
+
+@media (min-width: 768px) {
+  .login-image-section {
+    display: block; /* Visible en tablets y escritorio */
+  }
+}
+
+/* Sección del formulario (derecha) */
+.login-form-section {
+  flex: 1;
+  display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh; /* Ocupa toda la altura de la ventana */
-  background: linear-gradient(135deg, #f0f2f5 0%, #e0e5ec 100%); /* Fondo degradado suave */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
+  background-color: #f0f2f5;
 }
 
 /* Estilos para el formulario de login */
@@ -19,6 +42,12 @@
   max-width: 400px;
   text-align: center;
   box-sizing: border-box; /* Asegura que el padding no aumente el ancho */
+}
+
+/* Contenedor para el formulario y el botón de asistencia */
+.login-form-wrapper {
+  width: 100%;
+  max-width: 400px;
 }
 
 .login-form h2 {
@@ -48,22 +77,42 @@
   font-weight: 500;
 }
 
-.form-group input[type="email"],
-.form-group input[type="password"] {
+/* --- NUEVOS ESTILOS PARA INPUTS CON ICONOS --- */
+
+/* Contenedor para el icono y el input */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Estilo del icono */
+.input-with-icon .icon {
+  position: absolute;
+  left: 15px;
+  color: #aaa;
+  font-size: 16px;
+  pointer-events: none; /* Para que no interfiera con el click en el input */
+}
+
+.input-with-icon input[type="email"],
+.input-with-icon input[type="password"] {
+  /* --- Cambios para el estilo de línea inferior --- */
   width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  padding: 12px 0 12px 40px; /* Ajustamos el padding para incluir el del icono */
+  border: none; /* Quitamos todos los bordes */
+  border-bottom: 2px solid #ddd; /* Añadimos solo el borde inferior */
+  border-radius: 0; /* Quitamos el borde redondeado */
   font-size: 16px;
   color: #333;
   box-sizing: border-box;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: transparent; /* Hacemos el fondo transparente */
+  transition: border-color 0.3s ease; /* Transición solo para el color del borde */
 }
 
 .form-group input[type="email"]:focus,
 .form-group input[type="password"]:focus {
-  border-color: #007bff; /* Color de enfoque */
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  border-bottom-color: #007bff; /* Cambiamos el color del borde inferior al enfocar */
   outline: none;
 }
 
@@ -80,6 +129,11 @@
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
   margin-top: 10px;
+}
+
+/* Cambiamos el color del icono cuando el input está enfocado */
+.input-with-icon input:focus ~ .icon {
+  color: #007bff;
 }
 
 .login-button:hover {
@@ -184,7 +238,7 @@
 */
 .asistencia-button-outside {
   width: 100%;
-  max-width: 400px; /* Mismo max-width que el .login-form para que sea proporcional */
+  /* max-width ya no es necesario aquí, lo hereda del wrapper */
   margin-top: 20px; /* Espacio para separarlo del formulario */
   background-color: #6c757d; /* Un color secundario (gris oscuro) */
   color: white;
