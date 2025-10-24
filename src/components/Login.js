@@ -261,7 +261,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
                   setDni(value);
                 }}
                 placeholder="Ingresa tu DNI"
-                maxLength="9"
+                maxLength="8"
               />
             </div>
             <div className="user-display-container">
