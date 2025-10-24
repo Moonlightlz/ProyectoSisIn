@@ -3,7 +3,6 @@
 .registration-container {
   /* El contenedor principal ahora es manejado por AppLayout, 
      así que estos estilos se centran en el formulario en sí. */
-  font-family: 'Arial', sans-serif;
   display: flex; /* Para centrar el formulario dentro del content-area */
   justify-content: center;
 }

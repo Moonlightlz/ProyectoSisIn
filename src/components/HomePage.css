@@ -1,7 +1,7 @@
 .dashboard-container {
   padding: 30px;
   background-color: #f0f2f5; /* Un gris más suave para el fondo */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Poppins', sans-serif; /* Aseguramos Poppins */
   min-height: 100vh;
 }
 
@@ -313,25 +313,25 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: #1e293b; /* Azul oscuro/casi negro */
   color: white;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #2563eb, #1e40af);
+  background: #334155; /* Gris oscuro */
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #64748b, #475569);
+  background: #64748b; /* Gris medio */
   color: white;
 }
 
 .btn-secondary:hover {
-  background: linear-gradient(135deg, #475569, #334155);
+  background: #475569; /* Gris medio oscuro */
 }
 
 .btn-debug {
-  background: linear-gradient(135deg, #ff6b6b, #e74c3c);
+  background: #94a3b8; /* Gris claro para acciones menos importantes */
   color: white;
   font-size: 12px;
   padding: 8px 16px;

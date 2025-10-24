@@ -49,43 +49,43 @@
 }
 
 .btn-primary {
-  background: #007bff;
+  background: #1e293b; /* Azul oscuro/casi negro */
   color: white;
 }
 
 .btn-primary:hover {
-  background: #0056b3;
+  background: #334155; /* Gris oscuro */
 }
 
 .btn-secondary {
-  background: #6c757d;
+  background: #64748b; /* Gris medio */
   color: white;
 }
 
 .btn-secondary:hover {
-  background: #454d55;
+  background: #475569; /* Gris medio oscuro */
 }
 
 .btn-success {
-  background: #28a745;
+  background: #166534; /* Verde oscuro */
   color: white;
 }
 
 .btn-success:hover {
-  background: #1e7e34;
+  background: #14532d; /* Verde más oscuro */
 }
 
 .btn-warning {
-  background: #ffc107;
-  color: #212529;
+  background: #b45309; /* Naranja oscuro */
+  color: white;
 }
 
 .btn-warning:hover {
-  background: #e0a800;
+  background: #92400e; /* Naranja más oscuro */
 }
 
 .btn-info {
-  background: #17a2b8;
+  background: #0e7490; /* Cyan oscuro */
   color: white;
 }
 
@@ -210,14 +210,14 @@
 
 /* Estilos para el botón de toggle de planilla */
 .btn-secondary {
-  background-color: #e97844 !important;
-  border-color: #6d7a86 !important;
+  background-color: #64748b !important; /* Gris medio */
+  border-color: #475569 !important;
   color: white !important;
 }
 
 .btn-secondary:hover {
-  background-color: #5a6268 !important;
-  border-color: #545b62 !important;
+  background-color: #475569 !important; /* Gris medio oscuro */
+  border-color: #334155 !important;
 }
 
 /* Animación para la aparición de planilla */
