@@ -15,6 +15,10 @@ import './App.css';
 import './debugUser'; // Importar herramientas de debugging
 import './emergencyAuth'; // Importar funciones de emergencia
 import './testFirebase'; // Importar pruebas de conexión Firebase
+import { rawMaterialService } from './components/rawMaterialService'; // 1. Importar el servicio
+
+// 2. Habilitar la función de siembra para que esté disponible en la consola del navegador
+rawMaterialService.enableSeederInWindow();
 
 // Componente interno que usa el hook useAuth
 function AppContent() {

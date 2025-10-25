@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { rawMaterialService } from './rawMaterialService';
-import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle, FaFlask } from 'react-icons/fa';
 import './RawMaterialInventory.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -72,15 +72,14 @@ const RawMaterialInventory = ({ onBack }) => {
   const filteredMaterials = useMemo(() => {
     return materials.filter(material => {
       const categoryMatch = filterCategory ? material.category === filterCategory : true;
-      const supplierMatch = filterSupplier ? material.supplier === filterSupplier : true;
       const nameMatch = filterName 
         ? material.name.toLowerCase().includes(filterName.toLowerCase()) 
         : true;
       const lowStockMatch = filterLowStock 
         ? material.stock <= 20 // Filtrar por stock bajo (<= 20)
         : true;
-
-      return categoryMatch && supplierMatch && nameMatch && lowStockMatch;
+      const supplierMatch = filterSupplier ? material.supplier === filterSupplier : true;
+      return categoryMatch && nameMatch && lowStockMatch && supplierMatch;
     });
   }, [materials, filterCategory, filterSupplier, filterName, filterLowStock]);
 
@@ -494,9 +493,32 @@ const RawMaterialInventory = ({ onBack }) => {
     doc.save(`historial_${selectedMaterial.id}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const handleCreateTestData = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas crear un gran volumen de datos de prueba para materias primas? Esta acción puede tardar unos momentos y no se puede deshacer fácilmente.')) {
+      return;
+    }
+
+    setLoadingMaterials(true);
+    try {
+      const result = await rawMaterialService.createTestRawMaterials();
+      if (result.success) {
+        alert(`${result.count} materiales de prueba han sido creados exitosamente.`);
+        await fetchRawMaterials();
+      }
+    } catch (error) {
+      console.error("Error al crear datos de prueba:", error);
+      alert("Ocurrió un error al generar los datos de prueba.");
+    }
+    setLoadingMaterials(false);
+  };
+
   const renderListView = () => (
     <>
       <div className="inventory-filters">
+        <div className="filter-group">
+          <label><FaSearch /> Buscar por Nombre:</label>
+          <input type="text" value={filterName} onChange={(e) => setFilterName(e.target.value)} placeholder="Ej: Cuero Napa..." />
+        </div>
         <div className="filter-group">
           <label>Filtrar por Categoría:</label>
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
@@ -504,12 +526,21 @@ const RawMaterialInventory = ({ onBack }) => {
             {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
         </div>
-        <div className="filter-group">
+        {/* Este filtro se movió a la sección de reportes para no sobrecargar la vista principal.
+           Si se necesita aquí, se puede descomentar.
+        
+        <div className="filter-group"> 
           <label>Filtrar por Proveedor:</label>
           <select value={filterSupplier} onChange={(e) => setFilterSupplier(e.target.value)}>
             <option value="">Todos</option>
             {uniqueSuppliers.map(sup => <option key={sup} value={sup}>{sup}</option>)}
           </select>
+        </div>
+      </div>
+        */}
+        <div className="filter-group checkbox-filter">
+          <input type="checkbox" id="lowStockFilter" checked={filterLowStock} onChange={(e) => setFilterLowStock(e.target.checked)} />
+          <label htmlFor="lowStockFilter">Mostrar solo stock bajo</label>
         </div>
       </div>
 
@@ -519,6 +550,11 @@ const RawMaterialInventory = ({ onBack }) => {
           <button className="btn btn-success" onClick={() => openMovementModal('entrada')}><FaPlus /> Registrar Entrada</button>
           <button className="btn btn-warning" onClick={() => openMovementModal('salida')}><FaMinus /> Registrar Salida</button>
           <button className="btn btn-info" onClick={() => setCurrentView(VIEWS.REPORTS)}><FaChartBar /> Ver Reportes</button>
+          {materials.length === 0 && !loadingMaterials && (
+            <button className="btn btn-debug" onClick={handleCreateTestData}>
+              <FaFlask /> Crear Datos de Prueba
+            </button>
+          )}
         </div>
         <div className="action-group-right">
           {/* Por ahora, este botón no tiene lógica, pero está listo para conectarse */}
@@ -541,6 +577,10 @@ const RawMaterialInventory = ({ onBack }) => {
           <tbody>
             {loadingMaterials ? (
               <tr><td colSpan="6" className="loading-cell">Cargando materiales...</td></tr>
+            ) : filteredMaterials.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="no-data-cell">No se encontraron materiales. Puedes crear uno nuevo o generar datos de prueba.</td>
+              </tr>
             ) : (
               filteredMaterials.map(material => (
                 <tr key={material.id}>
