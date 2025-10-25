@@ -133,6 +133,7 @@ const SalesChart = ({ sales }) => {
 
   const options = {
     responsive: true,
+    aspectRatio: 1.2, // <-- Ajusta la proporción para que sea más grande
     plugins: {
       legend: { position: 'top' },
       title: { 
@@ -190,6 +191,7 @@ const WorkerChart = ({ workers }) => {
 
   const options = {
     responsive: true,
+    aspectRatio: 1.2, // <-- Ajusta la proporción para que sea más grande
     plugins: {
       legend: { position: 'top' },
       title: { 
@@ -273,10 +275,11 @@ const BestSellingProductsChart = ({ sales }) => {
   };
 
   const options = {
-    indexAxis: 'y', // <-- Esto crea el gráfico de barras horizontales
+    indexAxis: 'x', // <-- 'x' para barras verticales
     responsive: true,
+    aspectRatio: 1.2, // <-- Ajusta la proporción para que sea más grande
     plugins: {
-      legend: { display: false }, // Ocultamos la leyenda para dar más espacio
+      legend: { display: false },
       title: { 
         display: true, 
         text: 'Top 5 Productos Más Vendidos (en Pares)',
@@ -284,6 +287,13 @@ const BestSellingProductsChart = ({ sales }) => {
         color: '#334155'
       },
     },
+    scales: {
+      x: {
+        ticks: {
+          display: false // <-- Esto oculta las etiquetas del eje X
+        }
+      }
+    }
   };
 
   return (
