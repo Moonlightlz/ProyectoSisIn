@@ -8,6 +8,7 @@ import NewMaterialModal from './NewMaterialModal'; // Importar el modal
 import StockMovementModal from './StockMovementModal'; // Importar el modal de movimiento
 import SupplierDetailView from './SupplierDetailView'; // Importar la vista de detalle del proveedor
 import MovementDetailModal from './MovementDetailModal'; // Importar el modal de detalle de movimiento
+import MaterialSelectionModal from './MaterialSelectionModal'; // Importar modal de selección de material
 
 // Mock data for raw materials
 const mockRawMaterials = [
@@ -58,6 +59,8 @@ const RawMaterialInventory = ({ onBack }) => {
   const [activeReportTab, setActiveReportTab] = useState('kardex');
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [isMovementDetailModalOpen, setIsMovementDetailModalOpen] = useState(false);
+  const [isMaterialSelectionModalOpen, setIsMaterialSelectionModalOpen] = useState(false);
+  const [reportSelectedMaterial, setReportSelectedMaterial] = useState(null);
   const [selectedMovement, setSelectedMovement] = useState(null);
   const [movementMaterialId, setMovementMaterialId] = useState(null);
   const [movementType, setMovementType] = useState('entrada');
@@ -154,6 +157,99 @@ const RawMaterialInventory = ({ onBack }) => {
     const supplier = mockSuppliers.find(s => s.name === supplierName);
     setSelectedSupplier(supplier);
     setCurrentView(VIEWS.SUPPLIER_DETAIL);
+  };
+
+  const handleSelectMaterialForReport = (material) => {
+    setReportSelectedMaterial(material);
+    setIsMaterialSelectionModalOpen(false);
+  };
+
+  const filteredMovementsForKardex = useMemo(() => {
+    if (!reportStartDate && !reportEndDate) {
+      return mockMovementHistory; // Devuelve todos si no hay rango
+    }
+    return mockMovementHistory.filter(mov => {
+      // Se añade T00:00:00 para evitar problemas de zona horaria al comparar solo fechas
+      const movDate = new Date(mov.date + 'T00:00:00');
+      const startDate = reportStartDate ? new Date(reportStartDate + 'T00:00:00') : null;
+      const endDate = reportEndDate ? new Date(reportEndDate + 'T00:00:00') : null;
+      return (!startDate || movDate >= startDate) && (!endDate || movDate <= endDate);
+    });
+  }, [reportStartDate, reportEndDate]);
+
+  const generateKardexData = (material, movements) => {
+    if (!material) return [];
+    
+    let balance = material.stock; // Start with current stock and work backwards
+    const kardex = movements.map(mov => ({...mov})).reverse().map(mov => {
+      const newBalance = balance;
+      balance -= mov.quantity;
+      return {
+        date: mov.date,
+        type: mov.type,
+        notes: mov.notes,
+        entry: mov.quantity > 0 ? mov.quantity : '',
+        exit: mov.quantity < 0 ? -mov.quantity : '',
+        balance: newBalance,
+      };
+    }).reverse();
+
+    // Add initial balance row
+    kardex.unshift({
+      date: '',
+      type: 'saldo_inicial',
+      notes: 'Saldo Inicial',
+      entry: '',
+      exit: '',
+      balance: balance,
+    });
+
+    return kardex;
+  };
+
+  const handleExportKardexToExcel = () => {
+    if (!reportSelectedMaterial) {
+      alert('Por favor, selecciona un material para exportar el Kardex.');
+      return;
+    }
+    const kardexData = generateKardexData(reportSelectedMaterial, filteredMovementsForKardex);
+    const headers = ['Fecha', 'Detalle', 'Entrada', 'Salida', 'Saldo'];
+    const data = kardexData.map(item => [item.date, item.notes, item.entry, item.exit, item.balance]);
+    
+    const title = `Kardex de Material: ${reportSelectedMaterial.name}`;
+    const ws_data = [[title], [], headers, ...data];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+    ws['A1'].s = { font: { sz: 18, bold: true }, alignment: { horizontal: "center" } };
+    ws['!cols'] = [{ wch: 15 }, { wch: 40 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Kardex");
+    XLSX.writeFile(wb, `Kardex_${reportSelectedMaterial.id}.xlsx`);
+  };
+
+  const handleExportKardexToPdf = () => {
+    if (!reportSelectedMaterial) {
+      alert('Por favor, selecciona un material para exportar el Kardex.');
+      return;
+    }
+    const doc = new jsPDF();
+    const kardexData = generateKardexData(reportSelectedMaterial, filteredMovementsForKardex);
+    const tableData = kardexData.map(item => [item.date, item.notes, item.entry, item.exit, item.balance]);
+
+    doc.setFontSize(18);
+    doc.text(`Kardex de Material: ${reportSelectedMaterial.name}`, 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generado el: ${new Date().toLocaleString('es-PE')}`, 14, 30);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Fecha', 'Detalle', 'Entrada', 'Salida', 'Saldo']],
+      body: tableData,
+    });
+
+    doc.save(`Kardex_${reportSelectedMaterial.id}.pdf`);
   };
 
   const handleExportHistoryToExcel = () => {
@@ -410,18 +506,54 @@ const RawMaterialInventory = ({ onBack }) => {
                 </div>
                 <div className="filter-group">
                   <label>Material</label>
-                  <button className="btn btn-secondary"><FaSearch /> Seleccionar Material</button>
+                  {reportSelectedMaterial ? (
+                    <div className="selected-material-display">
+                      <span>{reportSelectedMaterial.name}</span>
+                      <button onClick={() => setIsMaterialSelectionModalOpen(true)}>Cambiar</button>
+                    </div>
+                  ) : (
+                    <button className="btn btn-secondary" onClick={() => setIsMaterialSelectionModalOpen(true)}><FaSearch /> Seleccionar Material</button>
+                  )}
                 </div>
               </div>
-              <div className="reports-actions">
-                <button className="btn btn-success-outline"><FaFileExcel /> Exportar Excel</button>
-                <button className="btn btn-danger-outline"><FaFilePdf /> Exportar PDF</button>
+              {reportSelectedMaterial && (
+                <div className="reports-actions">
+                  <button className="btn btn-success-outline" onClick={handleExportKardexToExcel}><FaFileExcel /> Exportar Excel</button>
+                  <button className="btn btn-danger-outline" onClick={handleExportKardexToPdf}><FaFilePdf /> Exportar PDF</button>
+                </div>
+              )}
+            </div>
+            {reportSelectedMaterial ? (
+              <div className="kardex-table-container">
+                <table className="kardex-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Detalle</th>
+                      <th>Entrada</th>
+                      <th>Salida</th>
+                      <th>Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generateKardexData(reportSelectedMaterial, filteredMovementsForKardex).map((item, index) => (
+                      <tr key={index}>
+                        <td>{item.date}</td>
+                        <td>{item.notes}</td>
+                        <td>{item.entry}</td>
+                        <td>{item.exit}</td>
+                        <td><strong>{item.balance}</strong></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
-            <div className="placeholder-view">
-              <h2><FaHistory /> Kardex de Material</h2>
-              <p>Selecciona un material y un rango de fechas para ver su historial detallado de movimientos.</p>
-            </div>
+            ) : (
+              <div className="placeholder-view">
+                <h2><FaHistory /> Kardex de Material</h2>
+                <p>Selecciona un material para ver su historial detallado de movimientos.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -544,6 +676,12 @@ const RawMaterialInventory = ({ onBack }) => {
         isOpen={isMovementDetailModalOpen}
         onClose={() => setIsMovementDetailModalOpen(false)}
         movement={selectedMovement}
+      />
+      <MaterialSelectionModal
+        isOpen={isMaterialSelectionModalOpen}
+        onClose={() => setIsMaterialSelectionModalOpen(false)}
+        onSelect={handleSelectMaterialForReport}
+        materials={materials}
       />
     </div>
   );

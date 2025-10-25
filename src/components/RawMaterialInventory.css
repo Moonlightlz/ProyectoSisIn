@@ -480,6 +480,56 @@
   margin-top: 0;
 }
 
+.selected-material-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.selected-material-display button {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.selected-material-display button:hover {
+  color: #2563eb;
+}
+
+.kardex-table-container {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+.kardex-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+}
+
+.kardex-table th,
+.kardex-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.kardex-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+
 
 .history-table-container {
   overflow-x: auto;
