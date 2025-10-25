@@ -1,9 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle } from 'react-icons/fa';
 import './RawMaterialInventory.css';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import NewMaterialModal from './NewMaterialModal'; // Importar el modal
 import StockMovementModal from './StockMovementModal'; // Importar el modal de movimiento
 import SupplierDetailView from './SupplierDetailView'; // Importar la vista de detalle del proveedor
+import MovementDetailModal from './MovementDetailModal'; // Importar el modal de detalle de movimiento
 
 // Mock data for raw materials
 const mockRawMaterials = [
@@ -53,6 +57,9 @@ const RawMaterialInventory = ({ onBack }) => {
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [activeReportTab, setActiveReportTab] = useState('kardex');
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [isMovementDetailModalOpen, setIsMovementDetailModalOpen] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState(null);
+  const [movementMaterialId, setMovementMaterialId] = useState(null);
   const [movementType, setMovementType] = useState('entrada');
   const [filterName, setFilterName] = useState('');
   const [filterLowStock, setFilterLowStock] = useState(false);
@@ -103,14 +110,43 @@ const RawMaterialInventory = ({ onBack }) => {
   };
 
   const handleSaveStockMovement = (movementData) => {
-    console.log("Guardando movimiento de stock (frontend):", movementData);
-    // Aquí irá la lógica para actualizar el stock en el backend
-    // y registrar el movimiento en el historial.
+    console.log("Guardando movimiento de stock (frontend):", movementData);    
+    // Lógica para actualizar el stock del material en el estado
+    setMaterials(prevMaterials =>
+      prevMaterials.map(material => {
+        if (material.id === movementData.materialId) {
+          const newStock = movementData.type === 'entrada'
+            ? material.stock + movementData.quantity
+            : material.stock - movementData.quantity;
+          
+          // Actualizar el material seleccionado si es el mismo
+          if (selectedMaterial && selectedMaterial.id === movementData.materialId) {
+            setSelectedMaterial(prev => ({ ...prev, stock: newStock }));
+          }
+
+          return { ...material, stock: newStock };
+        }
+        return material;
+      })
+    );
+
+    // Lógica para añadir al historial (temporalmente en frontend)
+    const newMovement = {
+      id: `MOV${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      type: movementData.type,
+      quantity: movementData.type === 'entrada' ? movementData.quantity : -movementData.quantity,
+      user: 'admin', // Simulado
+      notes: movementData.notes,
+    };
+    mockMovementHistory.unshift(newMovement); // Añadir al principio del array
+
     setIsMovementModalOpen(false);
   };
 
-  const openMovementModal = (type) => {
+  const openMovementModal = (type, materialId = null) => {
     setMovementType(type);
+    setMovementMaterialId(materialId);
     setIsMovementModalOpen(true);
   };
 
@@ -120,6 +156,77 @@ const RawMaterialInventory = ({ onBack }) => {
     setCurrentView(VIEWS.SUPPLIER_DETAIL);
   };
 
+  const handleExportHistoryToExcel = () => {
+    if (mockMovementHistory.length === 0) {
+      alert('No hay datos de historial para exportar.');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws_name = "Historial de Movimientos";
+
+    const headers = ['Fecha', 'Tipo', 'Cantidad', 'Responsable', 'Notas'];
+    const data = mockMovementHistory.map(mov => [
+      mov.date,
+      mov.type,
+      mov.quantity,
+      mov.user,
+      mov.notes,
+    ]);
+
+    const title = `Historial de Movimientos - ${selectedMaterial.name}`;
+    const ws_data = [
+      [title],
+      [],
+      headers,
+      ...data
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    // Estilos y anchos de columna
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+    ws['A1'].s = { font: { sz: 18, bold: true }, alignment: { horizontal: "center" } };
+    ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 40 }];
+
+    XLSX.utils.book_append_sheet(wb, ws, ws_name);
+    XLSX.writeFile(wb, `historial_${selectedMaterial.id}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExportHistoryToPdf = () => {
+    if (mockMovementHistory.length === 0) {
+      alert('No hay datos de historial para exportar.');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const title = `Historial de Movimientos - ${selectedMaterial.name}`;
+    const generationDate = new Date().toLocaleString('es-PE');
+
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generado el: ${generationDate}`, 14, 30);
+
+    const tableData = mockMovementHistory.map(mov => [
+      mov.date,
+      mov.type,
+      mov.quantity,
+      mov.user,
+      mov.notes,
+    ]);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Fecha', 'Tipo', 'Cantidad', 'Responsable', 'Notas']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [30, 41, 59], // slate-800
+      },
+    });
+
+    doc.save(`historial_${selectedMaterial.id}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   const renderListView = () => (
     <>
@@ -214,8 +321,8 @@ const RawMaterialInventory = ({ onBack }) => {
       <div className="detail-actions">
         <button className="btn btn-primary"><FaPencilAlt /> Editar Material</button>
         <button className="btn btn-danger"><FaTrash /> Eliminar/Desactivar</button>
-        <button className="btn btn-success"><FaPlus /> Registrar Entrada</button>
-        <button className="btn btn-warning"><FaMinus /> Registrar Salida</button>
+        <button className="btn btn-success" onClick={() => openMovementModal('entrada', selectedMaterial.id)}><FaPlus /> Registrar Entrada</button>
+        <button className="btn btn-warning" onClick={() => openMovementModal('salida', selectedMaterial.id)}><FaMinus /> Registrar Salida</button>
         <button className="btn btn-info"><FaHistory /> Ver Kardex</button>
       </div>
 
@@ -241,8 +348,8 @@ const RawMaterialInventory = ({ onBack }) => {
           <div className="detail-section-header">
             <h4>Historial de Movimientos</h4>
             <div className="detail-section-actions">
-              <button className="btn btn-sm btn-success-outline"><FaFileExcel /> Exportar a Excel</button>
-              <button className="btn btn-sm btn-danger-outline"><FaFilePdf /> Exportar a PDF</button>
+              <button className="btn btn-sm btn-success-outline" onClick={handleExportHistoryToExcel}><FaFileExcel /> Exportar a Excel</button>
+              <button className="btn btn-sm btn-danger-outline" onClick={handleExportHistoryToPdf}><FaFilePdf /> Exportar a PDF</button>
             </div>
           </div>
           <div className="history-table-container">
@@ -265,7 +372,7 @@ const RawMaterialInventory = ({ onBack }) => {
                     <td>{mov.quantity}</td>
                     <td>{mov.user}</td>
                     <td>{mov.notes}</td>
-                    <td><button className="btn btn-sm btn-secondary">Ver Detalle</button></td>
+                    <td><button className="btn btn-sm btn-secondary" onClick={() => { setSelectedMovement(mov); setIsMovementDetailModalOpen(true); }}>Ver Detalle</button></td>
                   </tr>
                 ))}
               </tbody>
@@ -431,6 +538,12 @@ const RawMaterialInventory = ({ onBack }) => {
         onSave={handleSaveStockMovement}
         movementType={movementType}
         materials={materials}
+        selectedMaterialId={movementMaterialId}
+      />
+      <MovementDetailModal
+        isOpen={isMovementDetailModalOpen}
+        onClose={() => setIsMovementDetailModalOpen(false)}
+        movement={selectedMovement}
       />
     </div>
   );

@@ -11,7 +11,7 @@ const StockMovementModal = ({ isOpen, onClose, onSave, movementType, materials, 
   useEffect(() => {
     if (isOpen) {
       // Reset form and pre-select material if an ID is passed
-      setMaterialId(selectedMaterialId || (materials.length > 0 ? materials[0].id : ''));
+      setMaterialId(selectedMaterialId || (materials.length > 0 ? '' : ''));
       setQuantity('');
       setNotes('');
       setError('');
@@ -59,11 +59,19 @@ const StockMovementModal = ({ isOpen, onClose, onSave, movementType, materials, 
           {error && <p className="error-message">{error}</p>}
           <div className="form-group-modal">
             <label htmlFor="materialId">Material</label>
-            <select id="materialId" value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
-              {materials.map(material => (
-                <option key={material.id} value={material.id}>
-                  {material.name}
-                </option>
+            <select 
+              id="materialId" 
+              value={materialId} 
+              onChange={(e) => setMaterialId(e.target.value)}
+              disabled={!!selectedMaterialId} // Deshabilitar si se pasa un ID
+            >
+              {!selectedMaterialId && <option value="">-- Selecciona un material --</option>}
+              {materials
+                .sort((a, b) => a.name.localeCompare(b.name)) // Ordenar alfabéticamente
+                .map(material => (
+                  <option key={material.id} value={material.id}>
+                    {material.name}
+                  </option>
               ))}
             </select>
           </div>
