@@ -61,6 +61,43 @@ class SaleService {
     }
   }
 
+  // Crear venta en una fecha específica (para seeding / backfill)
+  async createSaleAtDate(saleData: SaleFormData, userId: string, date: Date): Promise<string> {
+    try {
+      console.log('🆕 Creando venta en fecha específica:', date.toISOString());
+
+      const totalQuantity = saleData.products.reduce((sum, p) => sum + p.quantity, 0);
+      const totalDozens = saleData.products.reduce((sum, p) => sum + p.dozens, 0);
+      const totalAmount = saleData.products.reduce((sum, p) => sum + p.subtotal, 0);
+
+      const saleNumber = this.generateSaleNumber();
+
+      const when = Timestamp.fromDate(date);
+
+      const docRef = await addDoc(collection(db, this.collectionName), {
+        saleNumber,
+        date: when,
+        status: saleData.status,
+        distributor: saleData.distributor,
+        client: saleData.client,
+        products: saleData.products,
+        totalQuantity,
+        totalDozens,
+        totalAmount,
+        notes: saleData.notes || '',
+        createdAt: when,
+        updatedAt: when,
+        createdBy: userId
+      });
+
+      console.log('✅ Venta creada (fecha específica) con ID:', docRef.id, 'Número:', saleNumber);
+      return docRef.id;
+    } catch (error) {
+      console.error('❌ Error creando venta (fecha específica):', error);
+      throw error;
+    }
+  }
+
   // Obtener todas las ventas
   async getAllSales(): Promise<Sale[]> {
     try {
@@ -260,6 +297,89 @@ class SaleService {
       console.error('❌ Error creando datos de prueba para ventas:', error);
       throw error;
     }
+  }
+
+  // Generar ventas de prueba entre dos fechas, 1 a 5 ventas por día
+  async seedSalesBetweenDates(startDate: Date, endDate: Date, userId: string): Promise<number> {
+    // Catálogo simple para generar productos coherentes
+    const productCatalog = [
+      { id: 'prod1', name: 'Botas de Cuero Clásicas', type: 'Caballero', pricePerDozen: 540, sizes: '40,41,42' },
+      { id: 'prod2', name: 'Zapatos de Tacón Elegantes', type: 'Dama', pricePerDozen: 480, sizes: '37,38,39' },
+      { id: 'prod3', name: 'Zapatillas Escolares', type: 'Niño', pricePerDozen: 300, sizes: '28,29,30,31' },
+      { id: 'prod4', name: 'Sandalias de Verano', type: 'Niña', pricePerDozen: 240, sizes: '25,26,27' },
+      { id: 'prod5', name: 'Zapatillas Deportivas', type: 'Deportivo', pricePerDozen: 660, sizes: '38,39,40,41,42' },
+      { id: 'prod6', name: 'Mocasines Urbanos', type: 'Unisex', pricePerDozen: 420, sizes: '39,40,41' },
+    ];
+    const distributors = [
+      { name: 'Carlos Mendoza', id: 'DIST-001' },
+      { name: 'Ana García', id: 'DIST-002' },
+      { name: 'Luis Torres', id: 'DIST-003' },
+      { name: 'María Rojas', id: 'DIST-004' },
+    ];
+    const clients = [
+      { name: 'Zapatería El Gran Paso', id: 'CLI-001', address: 'Av. Principal 123', phone: '987654321' },
+      { name: 'Tiendas La Elegancia', id: 'CLI-002', address: 'Centro Comercial Plaza', phone: '976543210' },
+      { name: 'Calzados Rápidos S.A.', id: 'CLI-003', address: 'Zona Industrial Norte', phone: '965432109' },
+      { name: 'Deportes Max', id: 'CLI-004', address: 'Av. Los Héroes 456', phone: '954123789' },
+    ];
+    const statuses: Sale['status'][] = ['Pendiente', 'En_Proceso', 'Entregado'];
+
+    const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const choice = <T,>(arr: T[]) => arr[randInt(0, arr.length - 1)];
+
+    let created = 0;
+    const day = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+
+    while (day <= end) {
+      const salesToday = randInt(1, 5);
+
+      for (let i = 0; i < salesToday; i++) {
+        // Entre 1 y 3 productos por venta
+        const productCount = randInt(1, 3);
+        const chosen = [...productCatalog].sort(() => 0.5 - Math.random()).slice(0, productCount);
+        const products = chosen.map(p => {
+          const dozens = randInt(1, 6); // 1 a 6 docenas
+          const quantity = dozens * 12; // pares
+          return {
+            productId: p.id,
+            productName: p.name,
+            productType: p.type,
+            quantity,
+            dozens,
+            pricePerDozen: p.pricePerDozen,
+            subtotal: dozens * p.pricePerDozen,
+            sizes: p.sizes,
+          } as SaleProduct;
+        });
+
+        const distributor = choice(distributors);
+        const client = choice(clients);
+        const status = choice(statuses);
+        const notes = 'Venta generada automáticamente para pruebas';
+
+        // Hora aleatoria del día (entre 9:00 y 18:00)
+        const saleDate = new Date(day);
+        saleDate.setHours(randInt(9, 18), randInt(0, 59), randInt(0, 59), 0);
+
+        const formData: SaleFormData = {
+          distributor,
+          client,
+          products,
+          notes,
+          status,
+        };
+
+        await this.createSaleAtDate(formData, userId, saleDate);
+        created += 1;
+      }
+
+      // siguiente día
+      day.setDate(day.getDate() + 1);
+    }
+
+    console.log(`✅ Ventas de prueba generadas: ${created} entre`, startDate, endDate);
+    return created;
   }
 }
 
