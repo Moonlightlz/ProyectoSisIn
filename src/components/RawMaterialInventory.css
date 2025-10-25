@@ -13,6 +13,7 @@
   background-color: #ffffff;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+  align-items: flex-end;
 }
 
 .filter-group {
@@ -34,6 +35,33 @@
   background-color: #fff;
   font-size: 14px;
   min-width: 200px;
+}
+
+.filter-group input[type="text"] {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #fff;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.filter-group.checkbox-filter {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px; /* Align with other inputs */
+}
+
+.filter-group.checkbox-filter input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.filter-group.checkbox-filter label {
+  margin-bottom: 0; /* Override default label style */
+  cursor: pointer;
 }
 
 .inventory-actions {
@@ -412,6 +440,44 @@
 .reports-actions {
   display: flex;
   gap: 10px;
+}
+
+.reports-tabs {
+  display: flex;
+  gap: 5px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 25px;
+}
+
+.tab-btn {
+  padding: 12px 20px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease-in-out;
+  margin-bottom: -2px; /* Align with the container border */
+}
+
+.tab-btn:hover {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+.tab-btn.active {
+  color: #1e293b;
+  border-bottom-color: #3b82f6;
+}
+
+.report-content {
+  animation: fadeInDetails 0.4s ease-out;
+}
+
+.low-stock-alerts, .valuation-section {
+  margin-top: 0;
 }
 
 

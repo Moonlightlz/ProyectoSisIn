@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle } from 'react-icons/fa';
 import './RawMaterialInventory.css';
+import NewMaterialModal from './NewMaterialModal'; // Importar el modal
+import StockMovementModal from './StockMovementModal'; // Importar el modal de movimiento
+import SupplierDetailView from './SupplierDetailView'; // Importar la vista de detalle del proveedor
 
 // Mock data for raw materials
 const mockRawMaterials = [
@@ -10,6 +13,15 @@ const mockRawMaterials = [
   { id: 'RM004', name: 'Ojetillos Metálicos (Ciento)', category: 'Accesorios', supplier: 'Metales SAC', stock: 200, unit: 'cientos', lowStockThreshold: 50, cost: 3.00 },
   { id: 'RM005', name: 'Pegamento para Calzado (Galón)', category: 'Químicos', supplier: 'Química Industrial', stock: 8, unit: 'galones', lowStockThreshold: 5, cost: 45.00 },
   { id: 'RM006', name: 'Badana para forro (Metro)', category: 'Cueros', supplier: 'Curtidos del Norte', stock: 120, unit: 'metros', lowStockThreshold: 40, cost: 9.80 },
+];
+
+// Mock data for suppliers
+const mockSuppliers = [
+  { id: 'SUP01', name: 'Curtidos del Norte', address: 'Av. Industrial 123, Trujillo', phone: '044-203040', email: 'ventas@curtidosnorte.com' },
+  { id: 'SUP02', name: 'Polímeros Andinos', address: 'Calle Los Plásticos 500, Lima', phone: '01-555-6789', email: 'contacto@polimerosandinos.pe' },
+  { id: 'SUP03', name: 'Hilos del Sur', address: 'Jr. Arequipa 456, Arequipa', phone: '054-302010', email: 'pedidos@hilosdelsur.com' },
+  { id: 'SUP04', name: 'Metales SAC', address: 'Parque Industrial, Callao', phone: '01-450-8090', email: 'info@metalessac.com' },
+  { id: 'SUP05', name: 'Química Industrial', address: 'Av. Argentina 789, Lima', phone: '01-334-5566', email: 'ventas@quimicaindustrial.com' },
 ];
 
 // Mock data for movement history
@@ -23,7 +35,8 @@ const mockMovementHistory = [
 const VIEWS = {
   LIST: 'list',
   REPORTS: 'reports',
-  DETAIL: 'detail'
+  DETAIL: 'detail',
+  SUPPLIER_DETAIL: 'supplier_detail'
 };
 
 const RawMaterialInventory = ({ onBack }) => {
@@ -34,24 +47,79 @@ const RawMaterialInventory = ({ onBack }) => {
   const [filterSupplier, setFilterSupplier] = useState('');
   const [reportStartDate, setReportStartDate] = useState('');
   const [reportEndDate, setReportEndDate] = useState('');
+  const [isNewMaterialModalOpen, setIsNewMaterialModalOpen] = useState(false);
   const [valuationDate, setValuationDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [editingMaterial, setEditingMaterial] = useState(null);
+  const [activeReportTab, setActiveReportTab] = useState('kardex');
+  const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [movementType, setMovementType] = useState('entrada');
+  const [filterName, setFilterName] = useState('');
+  const [filterLowStock, setFilterLowStock] = useState(false);
 
-  const uniqueCategories = useMemo(() => [...new Set(mockRawMaterials.map(m => m.category))], []);
+  const uniqueCategories = useMemo(() => [...new Set(materials.map(m => m.category))], [materials]);
   const uniqueSuppliers = useMemo(() => [...new Set(mockRawMaterials.map(m => m.supplier))], []);
 
   const filteredMaterials = useMemo(() => {
     return materials.filter(material => {
       const categoryMatch = filterCategory ? material.category === filterCategory : true;
       const supplierMatch = filterSupplier ? material.supplier === filterSupplier : true;
-      return categoryMatch && supplierMatch;
+      const nameMatch = filterName 
+        ? material.name.toLowerCase().includes(filterName.toLowerCase()) 
+        : true;
+      const lowStockMatch = filterLowStock 
+        ? material.stock <= material.lowStockThreshold 
+        : true;
+
+      return categoryMatch && supplierMatch && nameMatch && lowStockMatch;
     });
-  }, [materials, filterCategory, filterSupplier]);
+  }, [materials, filterCategory, filterSupplier, filterName, filterLowStock]);
 
   const getStockIndicator = (stock, threshold) => {
     if (stock <= threshold) return 'low';
     if (stock <= threshold * 1.5) return 'medium';
     return 'high';
   };
+
+  const handleSaveMaterial = (materialData) => {
+    if (materialData.id) {
+      // Lógica para ACTUALIZAR
+      console.log("Actualizando material (frontend):", materialData);
+      setMaterials(prev => prev.map(m => m.id === materialData.id ? materialData : m));
+      // Si el material editado es el que está seleccionado, actualizamos la vista de detalle
+      if (selectedMaterial && selectedMaterial.id === materialData.id) {
+        setSelectedMaterial(materialData);
+      }
+    } else {
+      // Lógica para CREAR
+      console.log("Guardando nuevo material (frontend):", materialData);
+      const newMaterial = { ...materialData, id: `RM${Date.now()}`, stock: 0 }; // Asignar ID y stock inicial
+      setMaterials(prev => [...prev, newMaterial]);
+    }
+
+    // Cerrar modales
+    setEditingMaterial(null);
+    setIsNewMaterialModalOpen(false);
+  };
+
+  const handleSaveStockMovement = (movementData) => {
+    console.log("Guardando movimiento de stock (frontend):", movementData);
+    // Aquí irá la lógica para actualizar el stock en el backend
+    // y registrar el movimiento en el historial.
+    setIsMovementModalOpen(false);
+  };
+
+  const openMovementModal = (type) => {
+    setMovementType(type);
+    setIsMovementModalOpen(true);
+  };
+
+  const handleViewSupplier = (supplierName) => {
+    const supplier = mockSuppliers.find(s => s.name === supplierName);
+    setSelectedSupplier(supplier);
+    setCurrentView(VIEWS.SUPPLIER_DETAIL);
+  };
+
 
   const renderListView = () => (
     <>
@@ -74,9 +142,9 @@ const RawMaterialInventory = ({ onBack }) => {
 
       <div className="inventory-actions">
         <div className="action-group-left">
-          <button className="btn btn-primary"><FaPlus /> Nuevo Material</button>
-          <button className="btn btn-success"><FaPlus /> Registrar Entrada</button>
-          <button className="btn btn-warning"><FaMinus /> Registrar Salida</button>
+          <button className="btn btn-primary" onClick={() => { setEditingMaterial(null); setIsNewMaterialModalOpen(true); }}><FaPlus /> Nuevo Material</button>
+          <button className="btn btn-success" onClick={() => openMovementModal('entrada')}><FaPlus /> Registrar Entrada</button>
+          <button className="btn btn-warning" onClick={() => openMovementModal('salida')}><FaMinus /> Registrar Salida</button>
           <button className="btn btn-info" onClick={() => setCurrentView(VIEWS.REPORTS)}><FaChartBar /> Ver Reportes</button>
         </div>
         <div className="action-group-right">
@@ -156,8 +224,8 @@ const RawMaterialInventory = ({ onBack }) => {
           <div className="detail-section-header">
             <h4>Ficha Técnica</h4>
             <div className="detail-section-actions">
-              <button className="btn btn-sm btn-secondary"><FaPencilAlt /> Editar Ficha Técnica</button>
-              <button className="btn btn-sm btn-secondary"><FaIdCard /> Ver Proveedor</button>
+              <button className="btn btn-sm btn-secondary" onClick={() => { setEditingMaterial(selectedMaterial); setIsNewMaterialModalOpen(true); }}><FaPencilAlt /> Editar Ficha Técnica</button>
+              <button className="btn btn-sm btn-secondary" onClick={() => handleViewSupplier(selectedMaterial.supplier)} disabled={!selectedMaterial.supplier}><FaIdCard /> Ver Proveedor</button>
             </div>
           </div>
           <div className="tech-specs-grid">
@@ -215,94 +283,115 @@ const RawMaterialInventory = ({ onBack }) => {
 
     return (
       <div className="reports-view-container">
-        <div className="reports-header">
-          <div className="reports-filters">
-            <div className="filter-group">
-              <label><FaCalendarAlt /> Filtrar por Fechas</label>
-              <div className="date-range-inputs">
-                <input type="date" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} />
-                <span>-</span>
-                <input type="date" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} />
+        <div className="reports-tabs">
+          <button className={`tab-btn ${activeReportTab === 'kardex' ? 'active' : ''}`} onClick={() => setActiveReportTab('kardex')}>Kardex por Material</button>
+          <button className={`tab-btn ${activeReportTab === 'alerts' ? 'active' : ''}`} onClick={() => setActiveReportTab('alerts')}>Alertas de Stock Bajo</button>
+          <button className={`tab-btn ${activeReportTab === 'valuation' ? 'active' : ''}`} onClick={() => setActiveReportTab('valuation')}>Valorización de Inventario</button>
+        </div>
+
+        {activeReportTab === 'kardex' && (
+          <div className="report-content">
+            <div className="reports-header">
+              <div className="reports-filters">
+                <div className="filter-group">
+                  <label><FaCalendarAlt /> Filtrar por Fechas</label>
+                  <div className="date-range-inputs">
+                    <input type="date" value={reportStartDate} onChange={(e) => setReportStartDate(e.target.value)} />
+                    <span>-</span>
+                    <input type="date" value={reportEndDate} onChange={(e) => setReportEndDate(e.target.value)} />
+                  </div>
+                </div>
+                <div className="filter-group">
+                  <label>Material</label>
+                  <button className="btn btn-secondary"><FaSearch /> Seleccionar Material</button>
+                </div>
+              </div>
+              <div className="reports-actions">
+                <button className="btn btn-success-outline"><FaFileExcel /> Exportar Excel</button>
+                <button className="btn btn-danger-outline"><FaFilePdf /> Exportar PDF</button>
               </div>
             </div>
-            <div className="filter-group">
-              <label>Material</label>
-              <button className="btn btn-secondary"><FaSearch /> Seleccionar Material</button>
+            <div className="placeholder-view">
+              <h2><FaHistory /> Kardex de Material</h2>
+              <p>Selecciona un material y un rango de fechas para ver su historial detallado de movimientos.</p>
             </div>
           </div>
-          <div className="reports-actions">
-            <button className="btn btn-success-outline"><FaFileExcel /> Exportar Excel</button>
-            <button className="btn btn-danger-outline"><FaFilePdf /> Exportar PDF</button>
-          </div>
-        </div>
+        )}
 
-        <div className="detail-section low-stock-alerts">
-          <div className="detail-section-header">
-            <h4>Alertas de Stock Bajo</h4>
-            <div className="detail-section-actions">
-              <button className="btn btn-sm btn-secondary"><FaSync /> Actualizar Alertas</button>
-              <button className="btn btn-sm btn-success"><FaFileInvoice /> Generar Orden de Compra</button>
+        {activeReportTab === 'alerts' && (
+          <div className="report-content">
+            <div className="detail-section low-stock-alerts">
+              <div className="detail-section-header">
+                <h4><FaExclamationTriangle /> Alertas de Stock Bajo</h4>
+                <div className="detail-section-actions">
+                  <button className="btn btn-sm btn-secondary"><FaSync /> Actualizar Alertas</button>
+                  <button className="btn btn-sm btn-success"><FaFileInvoice /> Generar Orden de Compra</button>
+                </div>
+              </div>
+              {lowStockItems.length > 0 ? (
+                <ul className="low-stock-list">
+                  {lowStockItems.map(item => (
+                    <li key={item.id}>
+                      <span>{item.name}</span>
+                      <span className="low-stock-indicator">
+                        {item.stock} / {item.lowStockThreshold} {item.unit}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="no-alerts-message">No hay materiales con stock bajo actualmente.</p>
+              )}
             </div>
           </div>
-          {lowStockItems.length > 0 ? (
-            <ul className="low-stock-list">
-              {lowStockItems.map(item => (
-                <li key={item.id}>
-                  <span>{item.name}</span>
-                  <span className="low-stock-indicator">
-                    {item.stock} / {item.lowStockThreshold} {item.unit}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="no-alerts-message">No hay materiales con stock bajo actualmente.</p>
-          )}
-        </div>
+        )}
 
-        <div className="detail-section valuation-section">
-          <div className="detail-section-header">
-            <h4>Valorización de Inventario</h4>
-          </div>
-          <div className="valuation-controls">
-            <div className="filter-group">
-              <label>Fecha de Corte:</label>
-              <input type="date" value={valuationDate} onChange={(e) => setValuationDate(e.target.value)} />
+        {activeReportTab === 'valuation' && (
+          <div className="report-content">
+            <div className="detail-section valuation-section">
+              <div className="detail-section-header">
+                <h4><FaChartBar /> Valorización de Inventario</h4>
+              </div>
+              <div className="valuation-controls">
+                <div className="filter-group">
+                  <label>Fecha de Corte:</label>
+                  <input type="date" value={valuationDate} onChange={(e) => setValuationDate(e.target.value)} />
+                </div>
+                <div className="filter-group">
+                  <label>Categoría:</label>
+                  <select><option value="">Todas</option>{uniqueCategories.map(c => <option key={c}>{c}</option>)}</select>
+                </div>
+                <div className="filter-group">
+                  <label>Proveedor:</label>
+                  <select><option value="">Todos</option>{uniqueSuppliers.map(s => <option key={s}>{s}</option>)}</select>
+                </div>
+                <button className="btn btn-primary"><FaFileDownload /> Exportar Reporte</button>
+              </div>
+              <div className="history-table-container">
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>Material</th>
+                      <th>Stock a la Fecha</th>
+                      <th>Costo Unitario</th>
+                      <th>Valor Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {materials.map(m => (
+                      <tr key={m.id}>
+                        <td>{m.name}</td>
+                        <td>{m.stock} {m.unit}</td>
+                        <td>S/ {m.cost.toFixed(2)}</td>
+                        <td>S/ {(m.stock * m.cost).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="filter-group">
-              <label>Categoría:</label>
-              <select><option value="">Todas</option>{uniqueCategories.map(c => <option key={c}>{c}</option>)}</select>
-            </div>
-            <div className="filter-group">
-              <label>Proveedor:</label>
-              <select><option value="">Todos</option>{uniqueSuppliers.map(s => <option key={s}>{s}</option>)}</select>
-            </div>
-            <button className="btn btn-primary"><FaFileDownload /> Exportar Reporte</button>
           </div>
-          <div className="history-table-container">
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>Material</th>
-                  <th>Stock a la Fecha</th>
-                  <th>Costo Unitario</th>
-                  <th>Valor Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {materials.map(m => (
-                  <tr key={m.id}>
-                    <td>{m.name}</td>
-                    <td>{m.stock} {m.unit}</td>
-                    <td>S/ {m.cost.toFixed(2)}</td>
-                    <td>S/ {(m.stock * m.cost).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+        )}
       </div>
     );
   };
@@ -313,6 +402,8 @@ const RawMaterialInventory = ({ onBack }) => {
         return renderReportsView();
       case VIEWS.DETAIL:
         return renderDetailView();
+      case VIEWS.SUPPLIER_DETAIL:
+        return <SupplierDetailView supplier={selectedSupplier} onBack={() => setCurrentView(VIEWS.DETAIL)} />;
       case VIEWS.LIST:
       default:
         return renderListView();
@@ -328,6 +419,19 @@ const RawMaterialInventory = ({ onBack }) => {
         </button>
       </div>
       {renderContent()}
+      <NewMaterialModal 
+        isOpen={isNewMaterialModalOpen || !!editingMaterial}
+        onClose={() => { setIsNewMaterialModalOpen(false); setEditingMaterial(null); }}
+        onSave={handleSaveMaterial}
+        editingMaterial={editingMaterial}
+      />
+      <StockMovementModal
+        isOpen={isMovementModalOpen}
+        onClose={() => setIsMovementModalOpen(false)}
+        onSave={handleSaveStockMovement}
+        movementType={movementType}
+        materials={materials}
+      />
     </div>
   );
 };

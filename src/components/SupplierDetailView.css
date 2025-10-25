@@ -1,0 +1,28 @@
+.supplier-detail-container {
+  background-color: #fff;
+  padding: 25px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  animation: fadeInDetails 0.4s ease-out;
+}
+
+.supplier-info-card {
+  background-color: #f8fafc;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  border: 1px solid #e2e8f0;
+}
+
+.supplier-info-card p {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.supplier-info-card p:last-child {
+  margin-bottom: 0;
+}

@@ -1,0 +1,20 @@
+/* Reutiliza muchos estilos de NewMaterialModal.css, pero con un ancho diferente */
+.stock-movement-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.stock-movement-modal .form-group-modal {
+  grid-template-columns: 1fr; /* Una sola columna para este modal */
+}
+
+.stock-movement-modal textarea {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
