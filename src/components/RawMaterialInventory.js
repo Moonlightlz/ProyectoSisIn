@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { rawMaterialService } from './rawMaterialService';
 import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle } from 'react-icons/fa';
 import './RawMaterialInventory.css';
 import jsPDF from 'jspdf';
@@ -13,16 +14,6 @@ import ConfirmationModal from './ConfirmationModal'; // Importar modal de confir
 import PurchaseOrderModal from './PurchaseOrderModal'; // Importar modal de orden de compra
 import StockAdjustmentModal from './StockAdjustmentModal'; // Importar modal de ajuste de stock
 
-// Mock data for raw materials
-const mockRawMaterials = [
-  { id: 'RM001', name: 'Cuero Genuino (Plancha)', category: 'Cueros', supplier: 'Curtidos del Norte', stock: 50, unit: 'planchas', lowStockThreshold: 20, cost: 85.50 },
-  { id: 'RM002', name: 'Suela de Goma Eva', category: 'Suelas', supplier: 'Polímeros Andinos', stock: 150, unit: 'pares', lowStockThreshold: 50, cost: 12.00 },
-  { id: 'RM003', name: 'Hilo de Nylon #40', category: 'Hilos', supplier: 'Hilos del Sur', stock: 15, unit: 'conos', lowStockThreshold: 10, cost: 5.20 },
-  { id: 'RM004', name: 'Ojetillos Metálicos (Ciento)', category: 'Accesorios', supplier: 'Metales SAC', stock: 200, unit: 'cientos', lowStockThreshold: 50, cost: 3.00 },
-  { id: 'RM005', name: 'Pegamento para Calzado (Galón)', category: 'Químicos', supplier: 'Química Industrial', stock: 8, unit: 'galones', lowStockThreshold: 5, cost: 45.00 },
-  { id: 'RM006', name: 'Badana para forro (Metro)', category: 'Cueros', supplier: 'Curtidos del Norte', stock: 120, unit: 'metros', lowStockThreshold: 40, cost: 9.80 },
-];
-
 // Mock data for suppliers
 const mockSuppliers = [
   { id: 'SUP01', name: 'Curtidos del Norte', address: 'Av. Industrial 123, Trujillo', phone: '044-203040', email: 'ventas@curtidosnorte.com' },
@@ -30,14 +21,6 @@ const mockSuppliers = [
   { id: 'SUP03', name: 'Hilos del Sur', address: 'Jr. Arequipa 456, Arequipa', phone: '054-302010', email: 'pedidos@hilosdelsur.com' },
   { id: 'SUP04', name: 'Metales SAC', address: 'Parque Industrial, Callao', phone: '01-450-8090', email: 'info@metalessac.com' },
   { id: 'SUP05', name: 'Química Industrial', address: 'Av. Argentina 789, Lima', phone: '01-334-5566', email: 'ventas@quimicaindustrial.com' },
-];
-
-// Mock data for movement history
-const mockMovementHistory = [
-    { id: 'MOV001', date: '2024-07-20', type: 'entrada', quantity: 50, user: 'admin', notes: 'Compra a proveedor' },
-    { id: 'MOV002', date: '2024-07-21', type: 'salida', quantity: -10, user: 'produccion', notes: 'Orden de producción #123' },
-    { id: 'MOV003', date: '2024-07-22', type: 'ajuste', quantity: -1, user: 'admin', notes: 'Ajuste por merma' },
-    { id: 'MOV004', date: '2024-07-23', type: 'salida', quantity: -15, user: 'produccion', notes: 'Orden de producción #125' },
 ];
 
 const VIEWS = {
@@ -48,7 +31,7 @@ const VIEWS = {
 };
 
 const RawMaterialInventory = ({ onBack }) => {
-  const [materials, setMaterials] = useState(mockRawMaterials);
+  const [materials, setMaterials] = useState([]);
   const [currentView, setCurrentView] = useState(VIEWS.LIST);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
@@ -70,6 +53,7 @@ const RawMaterialInventory = ({ onBack }) => {
   const [deletingMaterial, setDeletingMaterial] = useState(null);
   const [reportSelectedMaterial, setReportSelectedMaterial] = useState(null);
   const [selectedMovement, setSelectedMovement] = useState(null);
+  const [movementHistory, setMovementHistory] = useState([]);
   const [movementMaterialId, setMovementMaterialId] = useState(null);
   const [movementType, setMovementType] = useState('entrada');
   const [filterName, setFilterName] = useState('');
@@ -79,7 +63,7 @@ const RawMaterialInventory = ({ onBack }) => {
   const [valuationSupplier, setValuationSupplier] = useState('');
 
   const uniqueCategories = useMemo(() => [...new Set(materials.map(m => m.category))], [materials]);
-  const uniqueSuppliers = useMemo(() => [...new Set(mockRawMaterials.map(m => m.supplier))], []);
+  const uniqueSuppliers = useMemo(() => [...new Set(materials.map(m => m.supplier))], [materials]);
 
   const lowStockItems = useMemo(() => 
     materials.filter(material => material.stock <= material.lowStockThreshold),
@@ -117,8 +101,8 @@ const RawMaterialInventory = ({ onBack }) => {
     }
 
     // Filtrar movimientos que ocurrieron DESPUÉS de la fecha de corte
-    const movementsAfterDate = mockMovementHistory.filter(mov => {
-      const movDate = new Date(mov.date + 'T00:00:00');
+    const movementsAfterDate = movementHistory.filter(mov => {
+      const movDate = mov.timestamp?.toDate() || new Date(mov.date + 'T00:00:00');
       return movDate > valuationDateObj;
     });
 
@@ -130,9 +114,13 @@ const RawMaterialInventory = ({ onBack }) => {
   const fetchRawMaterials = async () => {
     setLoadingMaterials(true);
     console.log("Refrescando datos de materiales...");
-    // Simulación de llamada a API
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setMaterials(mockRawMaterials);
+    try {
+      const data = await rawMaterialService.getRawMaterials();
+      setMaterials(data);
+    } catch (error) {
+      console.error("Error al cargar materias primas:", error);
+      alert("No se pudieron cargar las materias primas.");
+    }
     setLoadingMaterials(false);
     console.log("Datos de materiales actualizados.");
   };
@@ -149,59 +137,35 @@ const RawMaterialInventory = ({ onBack }) => {
     return 'high';
   };
 
-  const handleSaveMaterial = (materialData) => {
+  const handleSaveMaterial = async (materialData) => {
     if (materialData.id) {
       // Lógica para ACTUALIZAR
-      console.log("Actualizando material (frontend):", materialData);
-      setMaterials(prev => prev.map(m => m.id === materialData.id ? materialData : m));
-      // Si el material editado es el que está seleccionado, actualizamos la vista de detalle
-      if (selectedMaterial && selectedMaterial.id === materialData.id) {
-        setSelectedMaterial(materialData);
-      }
+      console.log("Actualizando material:", materialData);
+      await rawMaterialService.updateRawMaterial(materialData.id, materialData);
     } else {
       // Lógica para CREAR
-      console.log("Guardando nuevo material (frontend):", materialData);
-      const newMaterial = { ...materialData, id: `RM${Date.now()}`, stock: 0 }; // Asignar ID y stock inicial
-      setMaterials(prev => [...prev, newMaterial]);
+      console.log("Guardando nuevo material:", materialData);
+      await rawMaterialService.addRawMaterial(materialData);
     }
 
     // Cerrar modales
     setEditingMaterial(null);
     setIsNewMaterialModalOpen(false);
+    fetchRawMaterials();
   };
 
-  const handleSaveStockMovement = (movementData) => {
+  const handleSaveStockMovement = async (movementData) => {
     console.log("Guardando movimiento de stock (frontend):", movementData);    
-    // Lógica para actualizar el stock del material en el estado
-    setMaterials(prevMaterials =>
-      prevMaterials.map(material => {
-        if (material.id === movementData.materialId) {
-          const newStock = movementData.type === 'entrada'
-            ? material.stock + movementData.quantity
-            : material.stock - movementData.quantity;
-          
-          // Actualizar el material seleccionado si es el mismo
-          if (selectedMaterial && selectedMaterial.id === movementData.materialId) {
-            setSelectedMaterial(prev => ({ ...prev, stock: newStock }));
-          }
-
-          return { ...material, stock: newStock };
-        }
-        return material;
-      })
-    );
-
-    // Lógica para añadir al historial (temporalmente en frontend)
-    const newMovement = {
-      id: `MOV${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      type: movementData.type,
-      quantity: movementData.type === 'entrada' ? movementData.quantity : -movementData.quantity,
-      user: 'admin', // Simulado
-      notes: movementData.notes,
-    };
-    mockMovementHistory.unshift(newMovement); // Añadir al principio del array
-
+    try {
+      await rawMaterialService.addStockMovement(movementData.materialId, movementData);
+      await fetchRawMaterials(); // Recargar lista de materiales para actualizar stock
+      if (currentView === VIEWS.DETAIL) {
+        await fetchMovementHistory(movementData.materialId); // Recargar historial si estamos en detalle
+      }
+    } catch (error) {
+      console.error("Error al guardar movimiento:", error);
+      alert(`Error: ${error.message}`);
+    }
     setIsMovementModalOpen(false);
   };
 
@@ -222,11 +186,10 @@ const RawMaterialInventory = ({ onBack }) => {
     setIsConfirmDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingMaterial) return;
-    console.log("Eliminando material (frontend):", deletingMaterial.id);
-    // Lógica para eliminar en el backend
-    setMaterials(prev => prev.filter(m => m.id !== deletingMaterial.id));
+    console.log("Desactivando material:", deletingMaterial.id);
+    await rawMaterialService.deleteRawMaterial(deletingMaterial.id);
 
     // Si estamos en la vista de detalle del material que se eliminó, volvemos a la lista.
     if (currentView === VIEWS.DETAIL && selectedMaterial?.id === deletingMaterial.id) {
@@ -235,35 +198,27 @@ const RawMaterialInventory = ({ onBack }) => {
 
     setDeletingMaterial(null);
     setIsConfirmDeleteModalOpen(false);
+    fetchRawMaterials();
   };
 
-  const handleSaveStockAdjustment = ({ materialId, newStock, reason }) => {
+  const handleSaveStockAdjustment = async ({ materialId, newStock, reason }) => {
     console.log("Guardando ajuste de stock (frontend):", { materialId, newStock, reason });
-    let adjustmentQuantity = 0;
+    const material = materials.find(m => m.id === materialId);
+    if (!material) return;
 
-    setMaterials(prevMaterials =>
-      prevMaterials.map(material => {
-        if (material.id === materialId) {
-          adjustmentQuantity = newStock - material.stock;
-          if (selectedMaterial && selectedMaterial.id === materialId) {
-            setSelectedMaterial(prev => ({ ...prev, stock: newStock }));
-          }
-          return { ...material, stock: newStock };
-        }
-        return material;
-      })
-    );
+    const adjustmentQuantity = newStock - material.stock;
 
-    const newMovement = {
-      id: `MOV${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      type: 'ajuste',
-      quantity: adjustmentQuantity,
-      user: 'admin', // Simulado
-      notes: reason,
-    };
-    mockMovementHistory.unshift(newMovement);
-
+    try {
+      await rawMaterialService.addStockMovement(materialId, {
+        type: 'ajuste',
+        quantity: adjustmentQuantity,
+        notes: reason,
+      });
+      await fetchRawMaterials();
+    } catch (error) {
+      console.error("Error al ajustar stock:", error);
+      alert(`Error: ${error.message}`);
+    }
     setIsAdjustmentModalOpen(false);
   };
 
@@ -288,6 +243,18 @@ const RawMaterialInventory = ({ onBack }) => {
   const handleSelectMaterialForReport = (material) => {
     setReportSelectedMaterial(material);
     setIsMaterialSelectionModalOpen(false);
+  };
+
+  const fetchMovementHistory = async (materialId) => {
+    if (!materialId) return;
+    try {
+      const historyData = await rawMaterialService.getMaterialMovements(materialId);
+      setMovementHistory(historyData);
+    } catch (error) {
+      console.error("Error al cargar historial de movimientos:", error);
+      alert("No se pudo cargar el historial.");
+      setMovementHistory([]);
+    }
   };
 
   const handleExportValuationToExcel = () => {
@@ -369,11 +336,11 @@ const RawMaterialInventory = ({ onBack }) => {
 
   const filteredMovementsForKardex = useMemo(() => {
     if (!reportStartDate && !reportEndDate) {
-      return mockMovementHistory; // Devuelve todos si no hay rango
+      return movementHistory; // Devuelve todos si no hay rango
     }
-    return mockMovementHistory.filter(mov => {
+    return movementHistory.filter(mov => {
       // Se añade T00:00:00 para evitar problemas de zona horaria al comparar solo fechas
-      const movDate = new Date(mov.date + 'T00:00:00');
+      const movDate = mov.timestamp?.toDate() || new Date(mov.date + 'T00:00:00');
       const startDate = reportStartDate ? new Date(reportStartDate + 'T00:00:00') : null;
       const endDate = reportEndDate ? new Date(reportEndDate + 'T00:00:00') : null;
       return (!startDate || movDate >= startDate) && (!endDate || movDate <= endDate);
@@ -388,7 +355,7 @@ const RawMaterialInventory = ({ onBack }) => {
       const newBalance = balance;
       balance -= mov.quantity;
       return {
-        date: mov.date,
+        date: mov.timestamp?.toDate().toLocaleDateString('es-PE') || mov.date,
         type: mov.type,
         notes: mov.notes,
         entry: mov.quantity > 0 ? mov.quantity : '',
@@ -456,7 +423,7 @@ const RawMaterialInventory = ({ onBack }) => {
   };
 
   const handleExportHistoryToExcel = () => {
-    if (mockMovementHistory.length === 0) {
+    if (movementHistory.length === 0) {
       alert('No hay datos de historial para exportar.');
       return;
     }
@@ -465,8 +432,8 @@ const RawMaterialInventory = ({ onBack }) => {
     const ws_name = "Historial de Movimientos";
 
     const headers = ['Fecha', 'Tipo', 'Cantidad', 'Responsable', 'Notas'];
-    const data = mockMovementHistory.map(mov => [
-      mov.date,
+    const data = movementHistory.map(mov => [
+      mov.timestamp?.toDate().toLocaleString('es-PE') || mov.date,
       mov.type,
       mov.quantity,
       mov.user,
@@ -492,7 +459,7 @@ const RawMaterialInventory = ({ onBack }) => {
   };
 
   const handleExportHistoryToPdf = () => {
-    if (mockMovementHistory.length === 0) {
+    if (movementHistory.length === 0) {
       alert('No hay datos de historial para exportar.');
       return;
     }
@@ -506,8 +473,8 @@ const RawMaterialInventory = ({ onBack }) => {
     doc.setFontSize(10);
     doc.text(`Generado el: ${generationDate}`, 14, 30);
 
-    const tableData = mockMovementHistory.map(mov => [
-      mov.date,
+    const tableData = movementHistory.map(mov => [
+      mov.timestamp?.toDate().toLocaleDateString('es-PE') || mov.date,
       mov.type,
       mov.quantity,
       mov.user,
@@ -588,7 +555,7 @@ const RawMaterialInventory = ({ onBack }) => {
                   </td>
                   <td>
                     <div className="table-actions">
-                      <button className="btn-table-action btn-details" onClick={() => { setSelectedMaterial(material); setCurrentView(VIEWS.DETAIL); }}><FaFileAlt /></button>                      <button className="btn-table-action btn-edit" onClick={() => { setEditingMaterial(material); setIsNewMaterialModalOpen(true); }}><FaPencilAlt /></button>
+                      <button className="btn-table-action btn-details" onClick={() => { setSelectedMaterial(material); fetchMovementHistory(material.id); setCurrentView(VIEWS.DETAIL); }}><FaFileAlt /></button>                      <button className="btn-table-action btn-edit" onClick={() => { setEditingMaterial(material); setIsNewMaterialModalOpen(true); }}><FaPencilAlt /></button>
                       <button className="btn-table-action btn-delete" onClick={() => handleDeleteClick(material)}><FaTrash /></button>
                       <button className="btn-table-action btn-adjust" onClick={() => { setAdjustingMaterial(material); setIsAdjustmentModalOpen(true); }}>Ajustar Stock</button>
                     </div>
@@ -658,12 +625,12 @@ const RawMaterialInventory = ({ onBack }) => {
                 </tr>
               </thead>
               <tbody>
-                {mockMovementHistory.map(mov => (
+                {movementHistory.map(mov => (
                   <tr key={mov.id}>
-                    <td>{mov.date}</td>
+                    <td>{mov.timestamp?.toDate().toLocaleDateString('es-PE')}</td>
                     <td><span className={`movement-badge ${mov.type}`}>{mov.type}</span></td>
                     <td>{mov.quantity}</td>
-                    <td>{mov.user}</td>
+                    <td>{mov.user || 'N/A'}</td>
                     <td>{mov.notes}</td>
                     <td><button className="btn btn-sm btn-secondary" onClick={() => { setSelectedMovement(mov); setIsMovementDetailModalOpen(true); }}>Ver Detalle</button></td>
                   </tr>
