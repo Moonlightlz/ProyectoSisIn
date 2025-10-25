@@ -1,10 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { saleService } from '../services/saleService';
 import { workerService, attendanceService } from '../services/workerService';
+import WorkerPayrollService from '../services/workerPayrollService';
 import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar } from 'react-icons/fa';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import './ReportsPage.css';
+
+// Utilidad: calcula horas trabajadas por día y totales por trabajador (mes actual)
+function computeWorkerHoursData(attendanceData) {
+  if (!attendanceData || attendanceData.length === 0) return [];
+
+  // Agrupar por trabajador
+  const byWorker = attendanceData.reduce((acc, record) => {
+    if (!record || !record.timestamp || !record.workerId) {
+      // Registro inválido o de esquema diferente, ignorar
+      return acc;
+    }
+    if (!acc[record.workerId]) acc[record.workerId] = { id: record.workerId, name: record.workerName, records: [] };
+    acc[record.workerId].records.push(record);
+    return acc;
+  }, {});
+
+  const pad = (n) => String(n).padStart(2, '0');
+
+  return Object.values(byWorker).map((workerData) => {
+    // Agrupar por fecha local AAAA-MM-DD
+    const byDay = {};
+    (workerData.records || []).forEach((rec) => {
+      if (!rec || !rec.timestamp) return;
+      const d = rec.timestamp.toDate();
+      const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      if (!byDay[key]) byDay[key] = [];
+      byDay[key].push(rec);
+    });
+
+    let totalHours = 0;
+    let workedDays = 0;
+    let overtimeHours = 0;
+
+    Object.values(byDay).forEach((dayRecords) => {
+      // Ordenar por tiempo
+      const sorted = [...dayRecords].sort((a, b) => a.timestamp.toDate() - b.timestamp.toDate());
+
+      let dayMillis = 0;
+      let lastEntry = null;
+      let hadBreak = false;
+
+      sorted.forEach((r) => {
+        const t = r.timestamp.toDate().getTime();
+        if (r.type === 'entry') {
+          // Considerar nueva entrada solo si no hay una abierta
+          if (lastEntry === null) lastEntry = t;
+        } else if (r.type === 'exit') {
+          if (lastEntry !== null) {
+            // Sumar tramo entry->exit
+            dayMillis += Math.max(0, t - lastEntry);
+            lastEntry = null;
+          }
+        } else if (r.type === 'break') {
+          hadBreak = true;
+        }
+      });
+
+      // Si hubo al menos un par entrada-salida, contamos el día
+      if (dayMillis > 0) {
+        if (hadBreak) {
+          // Descontar 45 minutos solo si hay registro de break
+          dayMillis = Math.max(0, dayMillis - 45 * 60 * 1000);
+        }
+        const dayHours = dayMillis / (1000 * 60 * 60);
+        totalHours += dayHours;
+        workedDays += 1;
+        overtimeHours += Math.max(0, dayHours - 8);
+      }
+    });
+
+    return {
+      workerId: workerData.id,
+      name: workerData.name,
+      hours: totalHours,
+      workedDays,
+      avgHours: workedDays > 0 ? totalHours / workedDays : 0,
+      overtimeHours,
+    };
+  }).sort((a, b) => b.hours - a.hours);
+}
 
 // Registrar los componentes de Chart.js que vamos a utilizar
 ChartJS.register(ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale);
@@ -214,8 +295,8 @@ const BestSellingProductsChart = ({ sales }) => {
 };
 
 // --- NUEVA TABLA DE HORAS TRABAJADAS POR EMPLEADO ---
-const WorkerHoursTable = ({ attendance, workers }) => {
-  if (!attendance || attendance.length === 0) {
+const WorkerHoursTable = ({ workerHoursData }) => {
+  if (!workerHoursData || workerHoursData.length === 0) {
     return (
       <div className="worker-hours-card">
         <h3><FaChartBar /> Rendimiento de Empleados (Mes Actual)</h3>
@@ -227,46 +308,19 @@ const WorkerHoursTable = ({ attendance, workers }) => {
     );
   }
 
-  const hoursByWorker = attendance.reduce((acc, record) => {
-    if (!acc[record.workerId]) acc[record.workerId] = { name: record.workerName, records: [] };
-    acc[record.workerId].records.push(record);
-    return acc;
-  }, {});
+  // Ordenar por horas totales descendente (mayor a menor)
+  const sorted = [...workerHoursData].sort((a, b) => {
+    const aHours = Number(a.hours ?? 0);
+    const bHours = Number(b.hours ?? 0);
+    if (bHours !== aHours) return bHours - aHours; // Descendente por horas
+    const aAvg = Number(a.avgHours ?? 0);
+    const bAvg = Number(b.avgHours ?? 0);
+    return bAvg - aAvg; // Descendente por promedio
+  });
 
-  const workerHoursData = Object.values(hoursByWorker).map(workerData => {
-    let totalHours = 0;
-    const dailyRecords = {};
-
-    (workerData.records || []).forEach(record => {
-      const dateStr = record.timestamp.toDate().toISOString().split('T')[0];
-      if (!dailyRecords[dateStr]) dailyRecords[dateStr] = [];
-      dailyRecords[dateStr].push(record);
-    });
-
-    Object.values(dailyRecords).forEach((dayRecords) => {
-      const entry = dayRecords.find(r => r.type === 'entry');
-      const exit = dayRecords.find(r => r.type === 'exit');
-      if (entry && exit) {
-        const entryTime = entry.timestamp.toDate().getTime();
-        const exitTime = exit.timestamp.toDate().getTime();
-        let durationMillis = exitTime - entryTime;
-        if (dayRecords.some(r => r.type === 'break')) {
-          durationMillis -= (45 * 60 * 1000);
-        }
-        totalHours += Math.max(0, durationMillis / (1000 * 60 * 60));
-      }
-    });
-    const workedDays = Object.keys(dailyRecords).length;
-    return {
-      name: workerData.name,
-      hours: totalHours,
-      workedDays: workedDays,
-      avgHours: workedDays > 0 ? totalHours / workedDays : 0,
-    };
-  }).sort((a, b) => b.hours - a.hours);
-
-  // Asumimos 8 horas diarias como meta
-  const maxHoursGoal = Math.max(...workerHoursData.map(w => w.hours), 8 * 22);
+  // Asumimos 8 horas diarias como meta; robusto ante undefined/strings
+  const hoursArray = sorted.map(w => Number(w.hours ?? 0));
+  const maxHoursGoal = Math.max(8 * 22, ...hoursArray);
 
   return (
     <div className="worker-hours-card">
@@ -281,22 +335,27 @@ const WorkerHoursTable = ({ attendance, workers }) => {
           </tr>
         </thead>
         <tbody>
-          {workerHoursData.map(worker => (
-            <tr key={worker.name}>
+          {sorted.map(worker => {
+            const safeHours = Number(worker.hours ?? 0);
+            const safeAvg = Number(worker.avgHours ?? 0);
+            const widthPct = maxHoursGoal > 0 ? (safeHours / maxHoursGoal) * 100 : 0;
+            return (
+            <tr key={worker.workerId || worker.name}>
               <td>{worker.name}</td>
               <td className="progress-cell">
                 <div className="progress-bar-container">
                   <div 
-                    className={`progress-bar ${worker.avgHours >= 8 ? 'good' : 'regular'}`}
-                    style={{ width: `${(worker.hours / maxHoursGoal) * 100}%` }}
+                    className={`progress-bar ${safeAvg >= 8 ? 'good' : 'regular'}`}
+                    style={{ width: `${widthPct}%` }}
                   ></div>
                 </div>
-                <span>{worker.hours.toFixed(1)}h</span>
+                <span>{safeHours.toFixed(1)}h</span>
               </td>
-              <td>{worker.workedDays}</td>
-              <td>{worker.avgHours.toFixed(1)}h</td>
+              <td>{Number(worker.workedDays ?? 0)}</td>
+              <td>{safeAvg.toFixed(1)}h</td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -309,7 +368,10 @@ const BonusCandidates = ({ workerHoursData }) => {
     return null;
   }
 
-  const candidates = workerHoursData.filter(worker => worker.hours > 48);
+  // Mostrar solo quienes tienen horas extras (> 0) y mostrar SOLO las horas extra
+  const candidates = workerHoursData
+    .filter(worker => (worker.overtimeHours || 0) > 0)
+    .sort((a, b) => (b.overtimeHours || 0) - (a.overtimeHours || 0));
 
   if (candidates.length === 0) {
     return (
@@ -327,7 +389,7 @@ const BonusCandidates = ({ workerHoursData }) => {
         {candidates.map(candidate => (
           <li key={candidate.name}>
             <span className="candidate-name">{candidate.name}</span>
-            <span className="candidate-hours">{candidate.hours.toFixed(1)} horas</span>
+            <span className="candidate-hours">{candidate.overtimeHours.toFixed(1)} horas extra</span>
           </li>
         ))}
       </ul>
@@ -360,47 +422,88 @@ function ReportsPage() {
         console.log("Datos de ventas cargados:", salesData); // Log de depuración
         console.log("Datos de trabajadores cargados:", workersData); // Log de depuración
         console.log("Datos de asistencia cargados:", attendanceData); // Log de depuración
+        try {
+          const countsByWorker = (attendanceData || []).reduce((acc, r) => {
+            const id = r?.workerId || 'sin-id';
+            acc[id] = (acc[id] || 0) + 1;
+            return acc;
+          }, {});
+          console.log('Resumen asistencia por trabajador (conteo de registros):', countsByWorker);
+        } catch (e) {
+          console.warn('No se pudo resumir asistencia por trabajador:', e);
+        }
         setSales(salesData);
         setWorkers(workersData);
         setAttendance(attendanceData);
 
-        // --- RE-CALCULATE workerHoursData here to pass to BonusCandidates ---
-        const hoursByWorker = attendanceData.reduce((acc, record) => {
-          if (!acc[record.workerId]) {
-            acc[record.workerId] = { name: record.workerName, records: [] };
+        // Calcular workerHoursData con reglas corregidas (basado en asistencia)
+        const baseHoursData = computeWorkerHoursData(attendanceData);
+        console.log('Base de horas (por asistencia):', baseHoursData.map(x => ({ workerId: x.workerId, name: x.name, hours: Number(x.hours||0).toFixed(2), days: x.workedDays, avg: Number(x.avgHours||0).toFixed(2), extra: Number(x.overtimeHours||0).toFixed(2) })));
+
+        // Traer ajustes de planilla por trabajador y período (para customDays/customHours)
+        // Guardamos ambos valores si existen para poder recalcular horas/avg/extra
+        const customMap = {};
+        await Promise.all((workersData || []).map(async (w) => {
+          try {
+            const adjs = await WorkerPayrollService.getWorkerPayrollAdjustmentsByPeriod(w.id, startOfMonth, endOfMonth);
+            if (!adjs || adjs.length === 0) return;
+            // Tomar el más reciente
+            const sorted = [...adjs].sort((a, b) => {
+              const aTime = (a.updatedAt || a.createdAt || a.period.startDate).getTime();
+              const bTime = (b.updatedAt || b.createdAt || b.period.startDate).getTime();
+              return bTime - aTime;
+            });
+            const chosen = sorted[0];
+            if (!chosen) return;
+            // Si hay horas personalizadas, guardarlas; si hay días personalizados, guardarlos
+            // Si solo hay horas, derivamos días (= horas / 8) como apoyo visual
+            const customHours = (typeof chosen.customHours === 'number' && chosen.customHours >= 0) ? chosen.customHours : undefined;
+            const customDays = (typeof chosen.customDays === 'number' && chosen.customDays >= 0)
+              ? chosen.customDays
+              : (typeof customHours === 'number' ? Math.round((customHours / 8) * 100) / 100 : undefined);
+            customMap[w.id] = { customHours, customDays };
+          } catch (err) {
+            console.error('Error fetching adjustments for worker', w.id, err);
           }
-          acc[record.workerId].records.push(record);
-          return acc;
-        }, {});
+        }));
 
-        const calculatedHoursData = Object.values(hoursByWorker).map(workerData => {
-          let totalHours = 0;
-          const dailyRecords = {};
-          (workerData.records || []).forEach(record => {
-            const dateStr = record.timestamp.toDate().toISOString().split('T')[0];
-            if (!dailyRecords[dateStr]) dailyRecords[dateStr] = [];
-            dailyRecords[dateStr].push(record);
-          });
+        // Combinar: si hay customDays, sobreescribir workedDays y recalcular promedio
+  const byId = {};
+  baseHoursData.forEach(h => { if (h && h.workerId) byId[h.workerId] = h; });
 
-          Object.values(dailyRecords).forEach((dayRecords) => {
-            const entry = dayRecords.find(r => r.type === 'entry');
-            const exit = dayRecords.find(r => r.type === 'exit');
-            if (entry && exit) {
-              let durationMillis = exit.timestamp.toDate().getTime() - entry.timestamp.toDate().getTime();
-              if (dayRecords.some(r => r.type === 'break')) {
-                durationMillis -= (45 * 60 * 1000);
-              }
-              totalHours += Math.max(0, durationMillis / (1000 * 60 * 60));
-            }
-          });
+        // Incluir también trabajadores sin asistencia pero con customDays
+        const merged = (workersData || []).reduce((arr, w) => {
+          const base = byId[w.id];
+          const custom = customMap[w.id] || {};
+          const hasCustomDays = typeof custom.customDays === 'number' && custom.customDays >= 0;
+          const hasCustomHours = typeof custom.customHours === 'number' && custom.customHours >= 0;
 
-          return {
-            name: workerData.name,
-            hours: totalHours,
-            workedDays: Object.keys(dailyRecords).length,
-          };
-        });
-        setWorkerHoursData(calculatedHoursData);
+          if (base) {
+            const workedDays = hasCustomDays ? custom.customDays : base.workedDays;
+            // Total horas: si hay customHours usarlo; si no, y hay customDays, usar 8h/día; si no, mantener base
+            const hours = hasCustomHours
+              ? custom.customHours
+              : (hasCustomDays ? custom.customDays * 8 : base.hours);
+            const avgHours = workedDays > 0 ? (hours / workedDays) : 0;
+            const overtimeHours = Math.max(0, hours - workedDays * 8);
+            arr.push({ ...base, hours, workedDays, avgHours, overtimeHours, name: w.name, workerId: w.id });
+          } else if (hasCustomDays || hasCustomHours) {
+            // Sin horas de asistencia pero con ajustes manuales
+            const workedDays = hasCustomDays ? custom.customDays : 0;
+            const hours = hasCustomHours ? custom.customHours : (hasCustomDays ? custom.customDays * 8 : 0);
+            const avgHours = workedDays > 0 ? (hours / workedDays) : 0;
+            const overtimeHours = Math.max(0, hours - workedDays * 8);
+            arr.push({ workerId: w.id, name: w.name, hours, workedDays, avgHours, overtimeHours });
+          }
+          return arr;
+        }, []);
+
+        // Ordenar por horas descendente
+        merged.sort((a, b) => b.hours - a.hours);
+
+        console.log('Datos finales (tras ajustes y merge):', merged.map(x => ({ workerId: x.workerId, name: x.name, hours: Number(x.hours||0).toFixed(2), days: x.workedDays, avg: Number(x.avgHours||0).toFixed(2), extra: Number(x.overtimeHours||0).toFixed(2) })));
+
+        setWorkerHoursData(merged);
       } catch (error) {
         console.error("Error al cargar datos para reportes:", error);
         alert("No se pudieron cargar los datos para los reportes.");
@@ -423,7 +526,7 @@ function ReportsPage() {
         <SalesChart sales={sales} />
         <WorkerChart workers={workers} />
         <BestSellingProductsChart sales={sales} />
-        <WorkerHoursTable attendance={attendance} workers={workers} />
+        <WorkerHoursTable workerHoursData={workerHoursData} />
         <BonusCandidates workerHoursData={workerHoursData} />
       </div>
     </div>
