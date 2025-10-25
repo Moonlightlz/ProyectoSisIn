@@ -76,8 +76,14 @@ const SalesStats = ({ sales }) => {
 const SaleDetailsView = ({ sale, onClose }) => {
   if (!sale) return null;
 
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="sale-details-container">
+    <div className="modal-overlay" onClick={handleOverlayClick}>
       <div className="sale-card-main">
         <div className="sale-details-header">
           <div className="modal-title-group">
@@ -86,7 +92,7 @@ const SaleDetailsView = ({ sale, onClose }) => {
               {sale.status.replace('_', ' ')}
             </span>
           </div>
-          <button className="close-details-btn" onClick={onClose}>&times;</button>
+          <button className="modal-close-btn" onClick={onClose}>&times;</button>
         </div>
 
         <div className="info-grid">
