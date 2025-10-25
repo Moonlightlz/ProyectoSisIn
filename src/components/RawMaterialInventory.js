@@ -69,6 +69,8 @@ const RawMaterialInventory = ({ onBack }) => {
   const [filterName, setFilterName] = useState('');
   const [filterLowStock, setFilterLowStock] = useState(false);
   const [loadingMaterials, setLoadingMaterials] = useState(true);
+  const [valuationCategory, setValuationCategory] = useState('');
+  const [valuationSupplier, setValuationSupplier] = useState('');
 
   const uniqueCategories = useMemo(() => [...new Set(materials.map(m => m.category))], [materials]);
   const uniqueSuppliers = useMemo(() => [...new Set(mockRawMaterials.map(m => m.supplier))], []);
@@ -91,6 +93,33 @@ const RawMaterialInventory = ({ onBack }) => {
       return categoryMatch && supplierMatch && nameMatch && lowStockMatch;
     });
   }, [materials, filterCategory, filterSupplier, filterName, filterLowStock]);
+
+  const filteredValuationMaterials = useMemo(() => {
+    return materials.filter(material => {
+      const categoryMatch = valuationCategory ? material.category === valuationCategory : true;
+      const supplierMatch = valuationSupplier ? material.supplier === valuationSupplier : true;
+      return categoryMatch && supplierMatch;
+    });
+  }, [materials, valuationCategory, valuationSupplier]);
+
+  const calculateStockAtDate = (material, date) => {
+    const today = new Date();
+    const valuationDateObj = new Date(date + 'T23:59:59'); // Considerar el día completo
+
+    if (valuationDateObj >= today) {
+      return material.stock; // Si es hoy o futuro, es el stock actual
+    }
+
+    // Filtrar movimientos que ocurrieron DESPUÉS de la fecha de corte
+    const movementsAfterDate = mockMovementHistory.filter(mov => {
+      const movDate = new Date(mov.date + 'T00:00:00');
+      return movDate > valuationDateObj;
+    });
+
+    // Para obtener el stock pasado, revertimos los movimientos futuros.
+    // Sumamos las salidas y restamos las entradas.
+    return movementsAfterDate.reduce((stock, mov) => stock - mov.quantity, material.stock);
+  };
 
   const fetchRawMaterials = async () => {
     setLoadingMaterials(true);
@@ -196,6 +225,83 @@ const RawMaterialInventory = ({ onBack }) => {
   const handleSelectMaterialForReport = (material) => {
     setReportSelectedMaterial(material);
     setIsMaterialSelectionModalOpen(false);
+  };
+
+  const handleExportValuationToExcel = () => {
+    const dataToExport = filteredValuationMaterials;
+    if (dataToExport.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+
+    const totalValue = dataToExport.reduce((sum, item) => sum + (calculateStockAtDate(item, valuationDate) * item.cost), 0);
+
+    const headers = ['ID', 'Material', 'Categoría', 'Proveedor', 'Stock', 'Costo Unitario (S/)', 'Valor Total (S/)'];
+    const data = dataToExport.map(item => [
+      item.id, item.name, item.category, item.supplier, 
+      calculateStockAtDate(item, valuationDate), item.cost.toFixed(2), 
+      (calculateStockAtDate(item, valuationDate) * item.cost).toFixed(2)
+    ]);
+
+    const title = `Reporte de Valorización de Inventario a fecha ${valuationDate}`;
+    const ws_data = [
+      [title], [], headers, ...data, [], ['', '', '', '', '', 'VALOR TOTAL', totalValue.toFixed(2)]
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+    if (ws['A1']) ws['A1'].s = { font: { sz: 16, bold: true }, alignment: { horizontal: "center" } };
+    
+    const totalRow = data.length + 4;
+    const totalLabelCellRef = `F${totalRow + 1}`;
+    const totalValueCellRef = `G${totalRow + 1}`;
+
+    // Asegurarse de que las celdas existan antes de aplicarles estilo
+    if (!ws[totalLabelCellRef]) ws[totalLabelCellRef] = { t: 's', v: 'VALOR TOTAL' };
+    if (!ws[totalValueCellRef]) ws[totalValueCellRef] = { t: 'n', v: totalValue };
+
+    ws[totalLabelCellRef].s = { font: { bold: true } };
+    ws[totalValueCellRef].s = { font: { bold: true }, numFmt: '"S/ "#,##0.00' };
+
+    ws['!cols'] = [{ wch: 10 }, { wch: 40 }, { wch: 20 }, { wch: 25 }, { wch: 10 }, { wch: 15 }, { wch: 15 }];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Valorizacion");
+    XLSX.writeFile(wb, `Valorizacion_Inventario_${valuationDate}.xlsx`);
+  };
+
+  const handleExportValuationToPdf = () => {
+    const dataToExport = filteredValuationMaterials;
+    if (dataToExport.length === 0) {
+      alert('No hay datos para exportar.');
+      return;
+    }
+
+    const totalValue = dataToExport.reduce((sum, item) => sum + (calculateStockAtDate(item, valuationDate) * item.cost), 0);
+
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Reporte de Valorización de Inventario', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Fecha de corte: ${valuationDate}`, 14, 30);
+
+    const tableData = dataToExport.map(item => [
+      item.name, 
+      calculateStockAtDate(item, valuationDate), 
+      `S/ ${item.cost.toFixed(2)}`, `S/ ${(calculateStockAtDate(item, valuationDate) * item.cost).toFixed(2)}`
+    ]);
+
+    // Add total row
+    tableData.push(['', '', { content: 'VALOR TOTAL', styles: { fontStyle: 'bold', halign: 'right' } }, { content: `S/ ${totalValue.toFixed(2)}`, styles: { fontStyle: 'bold' } }]);
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Material', 'Stock', 'Costo Unitario', 'Valor Total']],
+      body: tableData,
+    });
+
+    doc.save(`Valorizacion_Inventario_${valuationDate}.pdf`);
   };
 
   const filteredMovementsForKardex = useMemo(() => {
@@ -419,8 +525,7 @@ const RawMaterialInventory = ({ onBack }) => {
                   </td>
                   <td>
                     <div className="table-actions">
-                      <button className="btn-table-action btn-details" onClick={() => { setSelectedMaterial(material); setCurrentView(VIEWS.DETAIL); }}><FaFileAlt /></button>
-                      <button className="btn-table-action btn-edit"><FaPencilAlt /></button>
+                      <button className="btn-table-action btn-details" onClick={() => { setSelectedMaterial(material); setCurrentView(VIEWS.DETAIL); }}><FaFileAlt /></button>                      <button className="btn-table-action btn-edit" onClick={() => { setEditingMaterial(material); setIsNewMaterialModalOpen(true); }}><FaPencilAlt /></button>
                       <button className="btn-table-action btn-delete"><FaTrash /></button>
                       <button className="btn-table-action btn-adjust">Ajustar Stock</button>
                     </div>
@@ -623,13 +728,22 @@ const RawMaterialInventory = ({ onBack }) => {
                 </div>
                 <div className="filter-group">
                   <label>Categoría:</label>
-                  <select><option value="">Todas</option>{uniqueCategories.map(c => <option key={c}>{c}</option>)}</select>
+              <select value={valuationCategory} onChange={(e) => setValuationCategory(e.target.value)}>
+                <option value="">Todas</option>
+                {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
                 </div>
                 <div className="filter-group">
                   <label>Proveedor:</label>
-                  <select><option value="">Todos</option>{uniqueSuppliers.map(s => <option key={s}>{s}</option>)}</select>
-                </div>
-                <button className="btn btn-primary"><FaFileDownload /> Exportar Reporte</button>
+              <select value={valuationSupplier} onChange={(e) => setValuationSupplier(e.target.value)}>
+                <option value="">Todos</option>
+                {uniqueSuppliers.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="valuation-export-buttons">
+              <button className="btn btn-success-outline" onClick={handleExportValuationToExcel}><FaFileExcel /> Exportar Excel</button>
+              <button className="btn btn-danger-outline" onClick={handleExportValuationToPdf}><FaFilePdf /> Exportar PDF</button>
+            </div>
               </div>
               <div className="history-table-container">
                 <table className="history-table">
@@ -642,15 +756,21 @@ const RawMaterialInventory = ({ onBack }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {materials.map(m => (
-                      <tr key={m.id}>
-                        <td>{m.name}</td>
-                        <td>{m.stock} {m.unit}</td>
-                        <td>S/ {m.cost.toFixed(2)}</td>
-                        <td>S/ {(m.stock * m.cost).toFixed(2)}</td>
-                      </tr>
-                    ))}
+                {filteredValuationMaterials.map(m => (
+                  <tr key={m.id}>
+                    <td>{m.name}</td>
+                    <td>{calculateStockAtDate(m, valuationDate)} {m.unit}</td>
+                    <td>S/ {m.cost.toFixed(2)}</td>
+                    <td>S/ {(calculateStockAtDate(m, valuationDate) * m.cost).toFixed(2)}</td>
+                  </tr>
+                ))}
                   </tbody>
+              <tfoot>
+                <tr className="valuation-total-row">
+                  <td colSpan="3">Valor Total del Inventario Filtrado</td>
+                  <td>S/ {filteredValuationMaterials.reduce((sum, item) => sum + (calculateStockAtDate(item, valuationDate) * item.cost), 0).toFixed(2)}</td>
+                </tr>
+              </tfoot>
                 </table>
               </div>
             </div>

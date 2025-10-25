@@ -554,6 +554,24 @@
   color: #475569;
 }
 
+.valuation-export-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.valuation-total-row td {
+  font-weight: 700;
+  font-size: 15px;
+  background-color: #f1f5f9;
+  color: #1e293b;
+  border-top: 2px solid #e2e8f0;
+}
+
+.valuation-total-row td:first-child {
+  text-align: right;
+}
+
+
 .loading-cell {
   text-align: center;
   padding: 40px;
