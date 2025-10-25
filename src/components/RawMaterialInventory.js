@@ -65,8 +65,8 @@ const RawMaterialInventory = ({ onBack }) => {
   const uniqueCategories = useMemo(() => [...new Set(materials.map(m => m.category))], [materials]);
   const uniqueSuppliers = useMemo(() => [...new Set(materials.map(m => m.supplier))], [materials]);
 
-  const lowStockItems = useMemo(() => 
-    materials.filter(material => material.stock <= material.lowStockThreshold),
+  const lowStockItems = useMemo(() =>
+    materials.filter(material => material.stock <= 20), // Stock bajo se considera <= 20
   [materials]);
 
   const filteredMaterials = useMemo(() => {
@@ -77,7 +77,7 @@ const RawMaterialInventory = ({ onBack }) => {
         ? material.name.toLowerCase().includes(filterName.toLowerCase()) 
         : true;
       const lowStockMatch = filterLowStock 
-        ? material.stock <= material.lowStockThreshold 
+        ? material.stock <= 20 // Filtrar por stock bajo (<= 20)
         : true;
 
       return categoryMatch && supplierMatch && nameMatch && lowStockMatch;
@@ -549,7 +549,7 @@ const RawMaterialInventory = ({ onBack }) => {
                   <td>{material.supplier}</td>
                   <td>{material.stock} {material.unit}</td>
                   <td>
-                    <span className={`stock-indicator ${getStockIndicator(material.stock, material.lowStockThreshold)}`}>
+                    <span className={`stock-indicator ${getStockIndicator(material.stock, 20)}`}> {/* Usar 20 como umbral fijo para el indicador */}
                       ●
                     </span>
                   </td>
@@ -731,9 +731,9 @@ const RawMaterialInventory = ({ onBack }) => {
                 <ul className="low-stock-list">
                   {lowStockItems.map(item => (
                     <li key={item.id}>
-                      <span>{item.name}</span>
+                      <span>{item.name} (ID: {item.id})</span>
                       <span className="low-stock-indicator">
-                        {item.stock} / {item.lowStockThreshold} {item.unit}
+                        {item.stock} / 20 {item.unit} {/* Mostrar 20 como el umbral de stock bajo */}
                       </span>
                     </li>
                   ))}
