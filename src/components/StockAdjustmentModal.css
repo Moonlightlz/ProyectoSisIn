@@ -1,0 +1,28 @@
+/* Reutiliza muchos estilos de otros modales */
+.stock-adjustment-modal {
+  max-width: 550px;
+  width: 90%;
+}
+
+.stock-adjustment-modal h4 {
+  font-size: 1.2em;
+  color: #1e293b;
+  margin-bottom: 5px;
+}
+
+.current-stock-info {
+  font-size: 1em;
+  color: #475569;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.current-stock-info strong {
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.stock-adjustment-modal textarea {
+  min-height: 80px;
+  resize: vertical;
+}

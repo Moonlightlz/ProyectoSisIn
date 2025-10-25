@@ -11,6 +11,7 @@ import MovementDetailModal from './MovementDetailModal'; // Importar el modal de
 import MaterialSelectionModal from './MaterialSelectionModal'; // Importar modal de selección de material
 import ConfirmationModal from './ConfirmationModal'; // Importar modal de confirmación
 import PurchaseOrderModal from './PurchaseOrderModal'; // Importar modal de orden de compra
+import StockAdjustmentModal from './StockAdjustmentModal'; // Importar modal de ajuste de stock
 
 // Mock data for raw materials
 const mockRawMaterials = [
@@ -64,6 +65,8 @@ const RawMaterialInventory = ({ onBack }) => {
   const [isMaterialSelectionModalOpen, setIsMaterialSelectionModalOpen] = useState(false);
   const [isPurchaseOrderModalOpen, setIsPurchaseOrderModalOpen] = useState(false);
   const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] = useState(false);
+  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [adjustingMaterial, setAdjustingMaterial] = useState(null);
   const [deletingMaterial, setDeletingMaterial] = useState(null);
   const [reportSelectedMaterial, setReportSelectedMaterial] = useState(null);
   const [selectedMovement, setSelectedMovement] = useState(null);
@@ -224,15 +227,57 @@ const RawMaterialInventory = ({ onBack }) => {
     console.log("Eliminando material (frontend):", deletingMaterial.id);
     // Lógica para eliminar en el backend
     setMaterials(prev => prev.filter(m => m.id !== deletingMaterial.id));
+
+    // Si estamos en la vista de detalle del material que se eliminó, volvemos a la lista.
+    if (currentView === VIEWS.DETAIL && selectedMaterial?.id === deletingMaterial.id) {
+      setCurrentView(VIEWS.LIST);
+    }
+
     setDeletingMaterial(null);
     setIsConfirmDeleteModalOpen(false);
   };
 
+  const handleSaveStockAdjustment = ({ materialId, newStock, reason }) => {
+    console.log("Guardando ajuste de stock (frontend):", { materialId, newStock, reason });
+    let adjustmentQuantity = 0;
+
+    setMaterials(prevMaterials =>
+      prevMaterials.map(material => {
+        if (material.id === materialId) {
+          adjustmentQuantity = newStock - material.stock;
+          if (selectedMaterial && selectedMaterial.id === materialId) {
+            setSelectedMaterial(prev => ({ ...prev, stock: newStock }));
+          }
+          return { ...material, stock: newStock };
+        }
+        return material;
+      })
+    );
+
+    const newMovement = {
+      id: `MOV${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      type: 'ajuste',
+      quantity: adjustmentQuantity,
+      user: 'admin', // Simulado
+      notes: reason,
+    };
+    mockMovementHistory.unshift(newMovement);
+
+    setIsAdjustmentModalOpen(false);
+  };
 
   const handleGeneratePurchaseOrder = (orderData) => {
     console.log("Generando Orden de Compra (frontend):", orderData);
     // Aquí iría la lógica para crear la orden de compra en el backend
     setIsPurchaseOrderModalOpen(false);
+  };
+
+  const handleViewKardex = () => {
+    if (!selectedMaterial) return;
+    setReportSelectedMaterial(selectedMaterial);
+    setActiveReportTab('kardex');
+    setCurrentView(VIEWS.REPORTS);
   };
 
   const handleRefreshAlerts = () => {
@@ -545,7 +590,7 @@ const RawMaterialInventory = ({ onBack }) => {
                     <div className="table-actions">
                       <button className="btn-table-action btn-details" onClick={() => { setSelectedMaterial(material); setCurrentView(VIEWS.DETAIL); }}><FaFileAlt /></button>                      <button className="btn-table-action btn-edit" onClick={() => { setEditingMaterial(material); setIsNewMaterialModalOpen(true); }}><FaPencilAlt /></button>
                       <button className="btn-table-action btn-delete" onClick={() => handleDeleteClick(material)}><FaTrash /></button>
-                      <button className="btn-table-action btn-adjust">Ajustar Stock</button>
+                      <button className="btn-table-action btn-adjust" onClick={() => { setAdjustingMaterial(material); setIsAdjustmentModalOpen(true); }}>Ajustar Stock</button>
                     </div>
                   </td>
                 </tr>
@@ -567,11 +612,11 @@ const RawMaterialInventory = ({ onBack }) => {
       </div>
 
       <div className="detail-actions">
-        <button className="btn btn-primary"><FaPencilAlt /> Editar Material</button>
-        <button className="btn btn-danger"><FaTrash /> Eliminar/Desactivar</button>
+        <button className="btn btn-primary" onClick={() => { setEditingMaterial(selectedMaterial); setIsNewMaterialModalOpen(true); }}><FaPencilAlt /> Editar Material</button>
+        <button className="btn btn-danger" onClick={() => handleDeleteClick(selectedMaterial)}><FaTrash /> Eliminar/Desactivar</button>
         <button className="btn btn-success" onClick={() => openMovementModal('entrada', selectedMaterial.id)}><FaPlus /> Registrar Entrada</button>
         <button className="btn btn-warning" onClick={() => openMovementModal('salida', selectedMaterial.id)}><FaMinus /> Registrar Salida</button>
-        <button className="btn btn-info"><FaHistory /> Ver Kardex</button>
+        <button className="btn btn-info" onClick={handleViewKardex}><FaHistory /> Ver Kardex</button>
       </div>
 
       <div className="detail-content">
@@ -862,6 +907,12 @@ const RawMaterialInventory = ({ onBack }) => {
           ¿Estás seguro de que deseas eliminar el material <strong>{deletingMaterial?.name}</strong>? Esta acción no se puede deshacer.
         </p>
       </ConfirmationModal>
+      <StockAdjustmentModal
+        isOpen={isAdjustmentModalOpen}
+        onClose={() => setIsAdjustmentModalOpen(false)}
+        onSave={handleSaveStockAdjustment}
+        material={adjustingMaterial}
+      />
     </div>
   );
 };
