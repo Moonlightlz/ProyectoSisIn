@@ -15,12 +15,17 @@ import PurchaseOrderModal from './PurchaseOrderModal'; // Importar modal de orde
 import StockAdjustmentModal from './StockAdjustmentModal'; // Importar modal de ajuste de stock
 
 // Mock data for suppliers
-const mockSuppliers = [
+const mockSuppliers = [ // Lista actualizada con todos los proveedores de los datos de prueba
   { id: 'SUP01', name: 'Curtidos del Norte', address: 'Av. Industrial 123, Trujillo', phone: '044-203040', email: 'ventas@curtidosnorte.com' },
   { id: 'SUP02', name: 'Polímeros Andinos', address: 'Calle Los Plásticos 500, Lima', phone: '01-555-6789', email: 'contacto@polimerosandinos.pe' },
   { id: 'SUP03', name: 'Hilos del Sur', address: 'Jr. Arequipa 456, Arequipa', phone: '054-302010', email: 'pedidos@hilosdelsur.com' },
   { id: 'SUP04', name: 'Metales SAC', address: 'Parque Industrial, Callao', phone: '01-450-8090', email: 'info@metalessac.com' },
   { id: 'SUP05', name: 'Química Industrial', address: 'Av. Argentina 789, Lima', phone: '01-334-5566', email: 'ventas@quimicaindustrial.com' },
+  { id: 'SUP06', name: 'Pieles del Sur', address: 'Calle Pieles 200, Arequipa', phone: '054-289070', email: 'contacto@pielesdelsur.com' },
+  { id: 'SUP07', name: 'Pieles Finas S.A.', address: 'Av. El Lujo 101, Lima', phone: '01-444-5566', email: 'ventas@pielesfinas.pe' },
+  { id: 'SUP08', name: 'Importaciones Textiles', address: 'Jr. Gamarra 1122, Lima', phone: '01-321-9876', email: 'info@importextiles.com' },
+  { id: 'SUP09', name: 'Maderas del Peru', address: 'Carretera Central Km 15, Huancayo', phone: '064-252525', email: 'contacto@maderasdelperu.com' },
+  { id: 'SUP10', name: 'Proveedor Genérico', address: 'Dirección no especificada', phone: 'N/A', email: 'N/A' },
 ];
 
 const VIEWS = {
