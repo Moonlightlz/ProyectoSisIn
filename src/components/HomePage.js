@@ -243,29 +243,6 @@ function HomePage() {
     }
   };
 
-  // Generar ventas de prueba entre 7 de octubre 2025 y hoy
-  const handleSeedOctoberSales = async () => {
-    if (!currentUser) return;
-
-    const start = new Date(2025, 9, 7); // Mes base 0 => 9 = Octubre
-    const today = new Date();
-
-    const confirmed = window.confirm(`¿Generar entre 1 a 5 ventas diarias desde el ${start.toLocaleDateString()} hasta hoy?`);
-    if (!confirmed) return;
-
-    try {
-      setLoading(true);
-      const created = await saleService.seedSalesBetweenDates(start, today, currentUser.uid);
-      await loadSales();
-      alert(`Se generaron ${created} ventas de prueba.`);
-    } catch (err) {
-      console.error('Error al generar ventas de prueba:', err);
-      alert('No se pudieron generar las ventas de prueba.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Renderizar vista actual
   const renderCurrentView = () => {
     switch (currentView) {
@@ -446,15 +423,6 @@ function HomePage() {
                   title="Ver todas las ventas registradas"
                 >
                   Ventas Totales
-                </button>
-                <button 
-                  className="btn btn-debug"
-                  onClick={handleSeedOctoberSales}
-                  disabled={loading}
-                  title="Genera ventas de prueba desde el 7/10/2025 hasta hoy"
-                  style={{ backgroundColor: '#0ea5e9', color: 'white' }}
-                >
-                  🧪 Generar Ventas (Oct 7 → Hoy)
                 </button>
                 <button 
                   className="btn btn-secondary"
