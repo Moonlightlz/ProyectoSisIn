@@ -246,9 +246,56 @@ const RawMaterialInventory = ({ onBack }) => {
     setIsAdjustmentModalOpen(false);
   };
 
-  const handleGeneratePurchaseOrder = (orderData) => {
-    console.log("Generando Orden de Compra (frontend):", orderData);
-    // Aquí iría la lógica para crear la orden de compra en el backend
+  const handleGeneratePurchaseOrder = (itemsToOrder) => {
+    console.log("Generando Orden de Compra (frontend):", itemsToOrder);
+
+    // 1. Agrupar items por proveedor
+    const ordersBySupplier = itemsToOrder.reduce((acc, item) => {
+      const supplierName = item.supplier || 'Proveedor Desconocido';
+      if (!acc[supplierName]) {
+        acc[supplierName] = [];
+      }
+      acc[supplierName].push(item);
+      return acc;
+    }, {});
+
+    // 2. Generar un PDF por cada proveedor
+    Object.entries(ordersBySupplier).forEach(([supplierName, items]) => {
+      const supplierDetails = mockSuppliers.find(s => s.name === supplierName) || { name: supplierName, address: 'N/A', phone: 'N/A' };
+      const doc = new jsPDF();
+      const today = new Date().toLocaleDateString('es-PE');
+      const orderNumber = `OC-${Date.now()}`;
+
+      // Encabezado
+      doc.setFontSize(20);
+      doc.text('Orden de Compra', 105, 20, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text(`Fecha: ${today}`, 190, 30, { align: 'right' });
+      doc.text(`Orden #: ${orderNumber}`, 190, 35, { align: 'right' });
+
+      // Datos de la empresa (Emisor)
+      doc.setFontSize(12);
+      doc.text('EMITIDO POR:', 20, 40);
+      doc.setFontSize(10);
+      doc.text('Calzados S.A.C.', 20, 46);
+      doc.text('Av. Producción 123, Trujillo, Perú', 20, 51);
+      doc.text('RUC: 20123456789', 20, 56);
+
+      // Datos del proveedor (Receptor)
+      doc.setFontSize(12);
+      doc.text('PROVEEDOR:', 110, 40);
+      doc.setFontSize(10);
+      doc.text(supplierDetails.name, 110, 46);
+      doc.text(supplierDetails.address, 110, 51);
+      doc.text(`Teléfono: ${supplierDetails.phone}`, 110, 56);
+
+      // Tabla de productos
+      const tableData = items.map(item => [item.name, item.orderQuantity, item.unit]);
+      autoTable(doc, { startY: 70, head: [['Material', 'Cantidad a Pedir', 'Unidad']], body: tableData });
+
+      doc.save(`Orden_Compra_${supplierName.replace(/\s/g, '_')}_${today}.pdf`);
+    });
+
     setIsPurchaseOrderModalOpen(false);
   };
 
