@@ -89,36 +89,193 @@ const addStockMovement = async (materialId, movementData) => {
   });
 };
 
+const seedCapelladaMaterials = async () => {
+  const materialsToSeed = [
+    // --- Materiales para el corte (parte superior o capellada) ---
+    // Cuero Natural
+    { name: 'Cuero Vacuno', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'planchas', lowStockThreshold: 10, cost: 95.50, stock: 15, createdAt: Timestamp.fromDate(new Date('2025-10-07')) },
+    { name: 'Cuero Porcino', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'planchas', lowStockThreshold: 15, cost: 75.00, stock: 25, createdAt: Timestamp.fromDate(new Date('2025-10-08')) },
+    { name: 'Cuero Caprino', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 20, cost: 60.00, stock: 18, createdAt: Timestamp.fromDate(new Date('2025-10-09')) },
+    { name: 'Cuero Ovino', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 20, cost: 55.00, stock: 30, createdAt: Timestamp.fromDate(new Date('2025-10-10')) },
+    { name: 'Nobuck', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 10, cost: 110.00, stock: 5, createdAt: Timestamp.fromDate(new Date('2025-10-11')) },
+    { name: 'Gamuza', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'pieles', lowStockThreshold: 15, cost: 105.00, stock: 22, createdAt: Timestamp.fromDate(new Date('2025-10-12')) },
+    { name: 'Charol', category: 'Cuero Natural', supplier: 'Pieles Finas S.A.', unit: 'planchas', lowStockThreshold: 8, cost: 120.00, stock: 10, createdAt: Timestamp.fromDate(new Date('2025-10-13')) },
+    // Cuero Sintético
+    { name: 'Cuero Sintético PU', category: 'Cuero Sintético', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 50, cost: 25.00, stock: 150, createdAt: Timestamp.fromDate(new Date('2025-10-14')) },
+    { name: 'Cuero Sintético PVC', category: 'Cuero Sintético', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 50, cost: 20.00, stock: 80, createdAt: Timestamp.fromDate(new Date('2025-10-15')) },
+    { name: 'Microfibra', category: 'Cuero Sintético', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 40, cost: 35.00, stock: 35, createdAt: Timestamp.fromDate(new Date('2025-10-16')) },
+    // Tela
+    { name: 'Lona', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 100, cost: 15.00, stock: 200, createdAt: Timestamp.fromDate(new Date('2025-10-17')) },
+    { name: 'Algodón', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 120, cost: 12.50, stock: 250, createdAt: Timestamp.fromDate(new Date('2025-10-18')) },
+    { name: 'Poliéster', category: 'Tela', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 150, cost: 10.00, stock: 300, createdAt: Timestamp.fromDate(new Date('2025-10-19')) },
+    { name: 'Denim', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 80, cost: 18.50, stock: 50, createdAt: Timestamp.fromDate(new Date('2025-10-20')) },
+    { name: 'Lona Encerada', category: 'Tela', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 60, cost: 22.00, stock: 70, createdAt: Timestamp.fromDate(new Date('2025-10-21')) },
+    { name: 'Canvas', category: 'Tela', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 60, cost: 17.00, stock: 75, createdAt: Timestamp.fromDate(new Date('2025-10-22')) },
+    // Malla
+    { name: 'Malla Mesh', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 30, cost: 12.00, stock: 60, createdAt: Timestamp.fromDate(new Date('2025-10-23')) },
+    { name: 'Malla Nylon', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 30, cost: 14.00, stock: 25, createdAt: Timestamp.fromDate(new Date('2025-10-24')) },
+    { name: 'Malla Poliéster', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 40, cost: 13.00, stock: 80, createdAt: Timestamp.fromDate(new Date('2025-10-25')) },
+    // Otros Materiales de Corte
+    { name: 'Neopreno', category: 'Sintéticos Especiales', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 20, cost: 45.00, stock: 40, createdAt: Timestamp.fromDate(new Date('2025-10-26')) },
+    { name: 'Fieltro', category: 'Textiles no Tejidos', supplier: 'Hilos del Sur', unit: 'planchas', lowStockThreshold: 50, cost: 8.00, stock: 100, createdAt: Timestamp.fromDate(new Date('2025-10-27')) },
+    { name: 'Lycra / Elásticos', category: 'Elásticos', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 25, cost: 22.00, stock: 30, createdAt: Timestamp.fromDate(new Date('2025-10-28')) },
+    { name: 'Sintéticos laminados o recubiertos', category: 'Sintéticos Especiales', supplier: 'Química Industrial', unit: 'metros', lowStockThreshold: 30, cost: 38.00, stock: 50, createdAt: Timestamp.fromDate(new Date('2025-10-29')) },
+    { name: 'Foam laminado', category: 'Espumas', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 40, cost: 19.00, stock: 60, createdAt: Timestamp.fromDate(new Date('2025-10-30')) },
+    { name: 'Tejidos técnicos (knit, flyknit, etc.)', category: 'Tejidos Técnicos', supplier: 'Importaciones Textiles', unit: 'pares', lowStockThreshold: 100, cost: 9.00, stock: 110, createdAt: Timestamp.fromDate(new Date('2025-10-31')) },
+  ];
+
+  const existingMaterialsSnapshot = await getDocs(rawMaterialsCollection);
+  const existingMaterialNames = new Set(existingMaterialsSnapshot.docs.map(doc => doc.data().name));
+
+  const promises = materialsToSeed
+    .filter(material => !existingMaterialNames.has(material.name))
+    .map(material => addDoc(rawMaterialsCollection, { ...material, status: 'active' }));
+
+  if (promises.length === 0) {
+    console.log("No hay nuevos materiales de corte que agregar. La base de datos ya los contiene.");
+    return { success: true, count: 0, message: 'Todos los materiales de corte ya existen.' };
+  }
+
+  await Promise.all(promises);
+  console.log(`${promises.length} materiales de corte han sido agregados exitosamente.`);
+  return { success: true, count: promises.length };
+};
+
+const seedEnsamblajeMaterials = async () => {
+  const materialsToSeed = [
+    // --- Materiales de ensamblaje ---
+    // Pegamentos
+    { name: 'Cemento de Contacto', category: 'Pegamentos', supplier: 'Química Industrial', unit: 'galones', lowStockThreshold: 5, cost: 150.00, stock: 8, createdAt: Timestamp.fromDate(new Date('2025-11-01')) },
+    { name: 'Pegamento PU', category: 'Pegamentos', supplier: 'Química Industrial', unit: 'galones', lowStockThreshold: 8, cost: 180.50, stock: 5, createdAt: Timestamp.fromDate(new Date('2025-11-02')) }, // Bajo stock
+    { name: 'Pegamento Base Solvente', category: 'Pegamentos', supplier: 'Polímeros Andinos', unit: 'latas', lowStockThreshold: 20, cost: 45.00, stock: 30, createdAt: Timestamp.fromDate(new Date('2025-11-03')) },
+    { name: 'Pegamento Base Agua', category: 'Pegamentos', supplier: 'Polímeros Andinos', unit: 'galones', lowStockThreshold: 10, cost: 120.00, stock: 12, createdAt: Timestamp.fromDate(new Date('2025-11-04')) },
+    // Fijaciones
+    { name: 'Clavos y Tachuelas', category: 'Fijaciones', supplier: 'Metales SAC', unit: 'cajas', lowStockThreshold: 50, cost: 15.00, stock: 35, createdAt: Timestamp.fromDate(new Date('2025-11-05')) }, // Bajo stock
+    { name: 'Grapas Industriales', category: 'Fijaciones', supplier: 'Metales SAC', unit: 'cajas', lowStockThreshold: 100, cost: 25.00, stock: 150, createdAt: Timestamp.fromDate(new Date('2025-11-06')) },
+    // Hilos y Agujas
+    { name: 'Hilo de Poliéster', category: 'Hilos y Agujas', supplier: 'Hilos del Sur', unit: 'conos', lowStockThreshold: 40, cost: 18.00, stock: 60, createdAt: Timestamp.fromDate(new Date('2025-11-07')) },
+    { name: 'Hilo de Nylon', category: 'Hilos y Agujas', supplier: 'Hilos del Sur', unit: 'conos', lowStockThreshold: 40, cost: 22.00, stock: 30, createdAt: Timestamp.fromDate(new Date('2025-11-08')) }, // Bajo stock
+    { name: 'Agujas Industriales', category: 'Hilos y Agujas', supplier: 'Importaciones Textiles', unit: 'cajas', lowStockThreshold: 20, cost: 50.00, stock: 25, createdAt: Timestamp.fromDate(new Date('2025-11-09')) },
+    // Componentes y Refuerzos
+    { name: 'Cinta de Refuerzo', category: 'Refuerzos', supplier: 'Polímeros Andinos', unit: 'rollos', lowStockThreshold: 30, cost: 12.00, stock: 50, createdAt: Timestamp.fromDate(new Date('2025-11-10')) },
+    { name: 'Cordones', category: 'Componentes', supplier: 'Hilos del Sur', unit: 'cientos', lowStockThreshold: 100, cost: 30.00, stock: 120, createdAt: Timestamp.fromDate(new Date('2025-11-11')) },
+    { name: 'Ojales Metálicos', category: 'Componentes', supplier: 'Metales SAC', unit: 'millares', lowStockThreshold: 10, cost: 40.00, stock: 5, createdAt: Timestamp.fromDate(new Date('2025-11-12')) }, // Bajo stock
+    { name: 'Remaches y Hebillas', category: 'Componentes', supplier: 'Metales SAC', unit: 'cientos', lowStockThreshold: 80, cost: 60.00, stock: 100, createdAt: Timestamp.fromDate(new Date('2025-11-13')) },
+    { name: 'Cierres (Zippers)', category: 'Componentes', supplier: 'Importaciones Textiles', unit: 'cientos', lowStockThreshold: 50, cost: 75.00, stock: 60, createdAt: Timestamp.fromDate(new Date('2025-11-14')) },
+  ];
+
+  const existingMaterialsSnapshot = await getDocs(rawMaterialsCollection);
+  const existingMaterialNames = new Set(existingMaterialsSnapshot.docs.map(doc => doc.data().name));
+
+  const promises = materialsToSeed
+    .filter(material => !existingMaterialNames.has(material.name))
+    .map(material => addDoc(rawMaterialsCollection, { ...material, status: 'active' }));
+
+  if (promises.length === 0) {
+    return { success: true, count: 0, message: 'Todos los materiales de ensamblaje ya existen.' };
+  }
+
+  await Promise.all(promises);
+  return { success: true, count: promises.length, message: `${promises.length} materiales de ensamblaje han sido agregados.` };
+};
+
+const seedSuelaMaterials = async () => {
+  const materialsToSeed = [
+    // --- Materiales para la suela ---
+    { name: 'Caucho Natural', category: 'Cauchos', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 20, cost: 65.00, stock: 50, createdAt: Timestamp.fromDate(new Date('2025-11-15')) },
+    { name: 'Caucho Sintético (SBR)', category: 'Cauchos', supplier: 'Polímeros Andinos', unit: 'planchas', lowStockThreshold: 30, cost: 55.50, stock: 70, createdAt: Timestamp.fromDate(new Date('2025-11-16')) },
+    { name: 'EVA (Etileno-Vinil-Acetato)', category: 'Polímeros para Suela', supplier: 'Polímeros Andinos', unit: 'planchas', lowStockThreshold: 50, cost: 42.00, stock: 120, createdAt: Timestamp.fromDate(new Date('2025-11-17')) },
+    { name: 'PU (Poliuretano expandido)', category: 'Polímeros para Suela', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 25, cost: 78.00, stock: 20, createdAt: Timestamp.fromDate(new Date('2025-11-18')) }, // Bajo stock
+    { name: 'PVC (Policloruro de vinilo)', category: 'Polímeros para Suela', supplier: 'Polímeros Andinos', unit: 'planchas', lowStockThreshold: 60, cost: 38.00, stock: 100, createdAt: Timestamp.fromDate(new Date('2025-11-19')) },
+    { name: 'TR (Termoplástico elastómero)', category: 'Polímeros para Suela', supplier: 'Polímeros Andinos', unit: 'planchas', lowStockThreshold: 40, cost: 68.50, stock: 80, createdAt: Timestamp.fromDate(new Date('2025-11-20')) },
+    { name: 'TPU (Poliuretano termoplástico)', category: 'Polímeros para Suela', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 30, cost: 85.00, stock: 40, createdAt: Timestamp.fromDate(new Date('2025-11-21')) },
+    { name: 'Neolite', category: 'Laminados para Suela', supplier: 'Curtidos del Norte', unit: 'planchas', lowStockThreshold: 35, cost: 52.00, stock: 60, createdAt: Timestamp.fromDate(new Date('2025-11-22')) },
+    { name: 'Cuero Suela', category: 'Naturales para Suela', supplier: 'Pieles del Sur', unit: 'planchas', lowStockThreshold: 10, cost: 135.00, stock: 12, createdAt: Timestamp.fromDate(new Date('2025-11-23')) }, // Bajo stock
+    { name: 'Madera (zuecos)', category: 'Naturales para Suela', supplier: 'Maderas del Peru', unit: 'bloques', lowStockThreshold: 40, cost: 25.00, stock: 50, createdAt: Timestamp.fromDate(new Date('2025-11-24')) },
+    { name: 'Corcho (sandalias)', category: 'Naturales para Suela', supplier: 'Importaciones Textiles', unit: 'planchas', lowStockThreshold: 30, cost: 32.00, stock: 25, createdAt: Timestamp.fromDate(new Date('2025-11-25')) }, // Bajo stock
+  ];
+
+  const existingMaterialsSnapshot = await getDocs(rawMaterialsCollection);
+  const existingMaterialNames = new Set(existingMaterialsSnapshot.docs.map(doc => doc.data().name));
+
+  const promises = materialsToSeed
+    .filter(material => !existingMaterialNames.has(material.name))
+    .map(material => addDoc(rawMaterialsCollection, { ...material, status: 'active' }));
+
+  if (promises.length === 0) {
+    return { success: true, count: 0, message: 'Todos los materiales de suela ya existen.' };
+  }
+
+  await Promise.all(promises);
+  return { success: true, count: promises.length, message: `${promises.length} materiales de suela han sido agregados.` };
+};
+
+const seedArmadoMaterials = async () => {
+  const materialsToSeed = [
+    // --- Materiales de armado y componentes ---
+    { name: 'Contrafuerte Termoformable', category: 'Componentes de Armado', supplier: 'Polímeros Andinos', unit: 'pares', lowStockThreshold: 100, cost: 2.50, stock: 150, createdAt: Timestamp.fromDate(new Date('2025-11-26')) },
+    { name: 'Contrafuerte de Fibra', category: 'Componentes de Armado', supplier: 'Importaciones Textiles', unit: 'pares', lowStockThreshold: 120, cost: 2.20, stock: 80, createdAt: Timestamp.fromDate(new Date('2025-11-27')) }, // Bajo stock
+    { name: 'Puntera Termoplástica', category: 'Componentes de Armado', supplier: 'Polímeros Andinos', unit: 'pares', lowStockThreshold: 100, cost: 2.80, stock: 200, createdAt: Timestamp.fromDate(new Date('2025-11-28')) },
+    { name: 'Cambrillón de Acero', category: 'Componentes Estructurales', supplier: 'Metales SAC', unit: 'pares', lowStockThreshold: 200, cost: 1.80, stock: 300, createdAt: Timestamp.fromDate(new Date('2025-11-29')) },
+    { name: 'Cambrillón de Plástico', category: 'Componentes Estructurales', supplier: 'Polímeros Andinos', unit: 'pares', lowStockThreshold: 250, cost: 1.50, stock: 180, createdAt: Timestamp.fromDate(new Date('2025-11-30')) }, // Bajo stock
+    { name: 'Plantilla Base de Celulosa', category: 'Plantillas y Espumas', supplier: 'Hilos del Sur', unit: 'planchas', lowStockThreshold: 80, cost: 15.00, stock: 100, createdAt: Timestamp.fromDate(new Date('2025-12-01')) },
+    { name: 'Plantilla Base de EVA', category: 'Plantillas y Espumas', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 60, cost: 25.00, stock: 75, createdAt: Timestamp.fromDate(new Date('2025-12-02')) },
+    { name: 'Espuma de Relleno PU', category: 'Plantillas y Espumas', supplier: 'Química Industrial', unit: 'metros', lowStockThreshold: 50, cost: 18.00, stock: 40, createdAt: Timestamp.fromDate(new Date('2025-12-03')) }, // Bajo stock
+    { name: 'Refuerzo Textil Adhesivo', category: 'Refuerzos', supplier: 'Importaciones Textiles', unit: 'rollos', lowStockThreshold: 40, cost: 28.00, stock: 60, createdAt: Timestamp.fromDate(new Date('2025-12-04')) },
+  ];
+
+  const existingMaterialsSnapshot = await getDocs(rawMaterialsCollection);
+  const existingMaterialNames = new Set(existingMaterialsSnapshot.docs.map(doc => doc.data().name));
+
+  const promises = materialsToSeed
+    .filter(material => !existingMaterialNames.has(material.name))
+    .map(material => addDoc(rawMaterialsCollection, { ...material, status: 'active' }));
+
+  if (promises.length === 0) {
+    return { success: true, count: 0, message: 'Todos los materiales de armado ya existen.' };
+  }
+
+  await Promise.all(promises);
+  return { success: true, count: promises.length, message: `${promises.length} materiales de armado han sido agregados.` };
+};
+
 const seedInitialMaterials = async () => {
   const materialsToSeed = [
+    // --- Materiales para el corte (parte superior o capellada) ---
     // Cuero Natural
-    { name: 'Cuero Vacuno (Plancha)', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'planchas', lowStockThreshold: 10, cost: 95.50, stock: 15 },
-    { name: 'Cuero Porcino (Plancha)', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'planchas', lowStockThreshold: 15, cost: 75.00, stock: 25 },
-    { name: 'Cuero Caprino (Piel)', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 20, cost: 60.00, stock: 18 }, // Stock bajo
-    { name: 'Nobuck (Piel)', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 10, cost: 110.00, stock: 5 }, // Stock bajo
-    { name: 'Gamuza (Piel)', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'pieles', lowStockThreshold: 15, cost: 105.00, stock: 22 },
-    { name: 'Charol (Plancha)', category: 'Cuero Natural', supplier: 'Pieles Finas S.A.', unit: 'planchas', lowStockThreshold: 8, cost: 120.00, stock: 10 },
+    { name: 'Cuero Vacuno', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'planchas', lowStockThreshold: 10, cost: 95.50, stock: 15 },
+    { name: 'Cuero Porcino', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'planchas', lowStockThreshold: 15, cost: 75.00, stock: 25 },
+    { name: 'Cuero Caprino', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 20, cost: 60.00, stock: 18 },
+    { name: 'Cuero Ovino', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 20, cost: 55.00, stock: 30 },
+    { name: 'Nobuck', category: 'Cuero Natural', supplier: 'Pieles del Sur', unit: 'pieles', lowStockThreshold: 10, cost: 110.00, stock: 5 },
+    { name: 'Gamuza', category: 'Cuero Natural', supplier: 'Curtidos del Norte', unit: 'pieles', lowStockThreshold: 15, cost: 105.00, stock: 22 },
+    { name: 'Charol', category: 'Cuero Natural', supplier: 'Pieles Finas S.A.', unit: 'planchas', lowStockThreshold: 8, cost: 120.00, stock: 10 },
 
     // Cuero Sintético
-    { name: 'Cuero Sintético PU (Rollo)', category: 'Cuero Sintético', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 50, cost: 25.00, stock: 150 },
-    { name: 'Cuero Sintético PVC (Rollo)', category: 'Cuero Sintético', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 50, cost: 20.00, stock: 80 },
-    { name: 'Microfibra (Rollo)', category: 'Cuero Sintético', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 40, cost: 35.00, stock: 35 }, // Stock bajo
+    { name: 'Cuero Sintético PU', category: 'Cuero Sintético', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 50, cost: 25.00, stock: 150 },
+    { name: 'Cuero Sintético PVC', category: 'Cuero Sintético', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 50, cost: 20.00, stock: 80 },
+    { name: 'Microfibra', category: 'Cuero Sintético', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 40, cost: 35.00, stock: 35 },
 
     // Tela
-    { name: 'Lona (Rollo)', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 100, cost: 15.00, stock: 200 },
-    { name: 'Denim (Rollo)', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 80, cost: 18.50, stock: 50 }, // Stock bajo
-    { name: 'Canvas (Rollo)', category: 'Tela', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 60, cost: 17.00, stock: 75 },
+    { name: 'Lona', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 100, cost: 15.00, stock: 200 },
+    { name: 'Algodón', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 120, cost: 12.50, stock: 250 },
+    { name: 'Poliéster', category: 'Tela', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 150, cost: 10.00, stock: 300 },
+    { name: 'Denim', category: 'Tela', supplier: 'Hilos del Sur', unit: 'metros', lowStockThreshold: 80, cost: 18.50, stock: 50 },
+    { name: 'Lona Encerada', category: 'Tela', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 60, cost: 22.00, stock: 70 },
+    { name: 'Canvas', category: 'Tela', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 60, cost: 17.00, stock: 75 },
 
     // Malla
-    { name: 'Malla Mesh (Rollo)', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 30, cost: 12.00, stock: 60 },
-    { name: 'Malla Nylon (Rollo)', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 30, cost: 14.00, stock: 25 }, // Stock bajo
+    { name: 'Malla Mesh', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 30, cost: 12.00, stock: 60 },
+    { name: 'Malla Nylon', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 30, cost: 14.00, stock: 25 },
+    { name: 'Malla Poliéster', category: 'Malla', supplier: 'Polímeros Andinos', unit: 'metros', lowStockThreshold: 40, cost: 13.00, stock: 80 },
 
-    // Otros
-    { name: 'Neopreno (Plancha)', category: 'Sintéticos Especiales', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 20, cost: 45.00, stock: 40 },
-    { name: 'Fieltro (Plancha)', category: 'Textiles no Tejidos', supplier: 'Hilos del Sur', unit: 'planchas', lowStockThreshold: 50, cost: 8.00, stock: 100 },
-    { name: 'Lycra (Rollo)', category: 'Elásticos', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 25, cost: 22.00, stock: 30 },
-    { name: 'Foam Laminado (Plancha)', category: 'Espumas', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 40, cost: 19.00, stock: 60 },
-    { name: 'Tejido Knit (Par)', category: 'Tejidos Técnicos', supplier: 'Importaciones Textiles', unit: 'pares', lowStockThreshold: 100, cost: 9.00, stock: 110 },
+    // Otros Materiales de Corte
+    { name: 'Neopreno', category: 'Sintéticos Especiales', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 20, cost: 45.00, stock: 40 },
+    { name: 'Fieltro', category: 'Textiles no Tejidos', supplier: 'Hilos del Sur', unit: 'planchas', lowStockThreshold: 50, cost: 8.00, stock: 100 },
+    { name: 'Lycra / Elásticos', category: 'Elásticos', supplier: 'Importaciones Textiles', unit: 'metros', lowStockThreshold: 25, cost: 22.00, stock: 30 },
+    { name: 'Sintético Laminado', category: 'Sintéticos Especiales', supplier: 'Química Industrial', unit: 'metros', lowStockThreshold: 30, cost: 38.00, stock: 50 },
+    { name: 'Foam Laminado', category: 'Espumas', supplier: 'Química Industrial', unit: 'planchas', lowStockThreshold: 40, cost: 19.00, stock: 60 },
+    { name: 'Tejido Knit', category: 'Tejidos Técnicos', supplier: 'Importaciones Textiles', unit: 'pares', lowStockThreshold: 100, cost: 9.00, stock: 110 },
   ];
 
   // Usamos un Set para no agregar materiales que ya existen por el nombre
@@ -252,5 +409,9 @@ export const rawMaterialService = {
   addStockMovement,
   getMaterialMovements,
   seedInitialMaterials, // Exportamos la función
+  seedCapelladaMaterials, // Exportamos la nueva función
+  seedEnsamblajeMaterials, // Exportamos la nueva función de ensamblaje
+  seedSuelaMaterials, // Exportamos la nueva función de suelas
+  seedArmadoMaterials, // Exportamos la nueva función de armado
   enableSeederInWindow, // Exportamos el habilitador
 };

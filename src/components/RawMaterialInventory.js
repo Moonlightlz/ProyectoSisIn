@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { rawMaterialService } from './rawMaterialService';
-import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle, FaFlask } from 'react-icons/fa';
+import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle, FaFlask, FaShoePrints, FaHammer, FaCubes, FaLayerGroup } from 'react-icons/fa';
 import './RawMaterialInventory.css';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -64,6 +64,26 @@ const RawMaterialInventory = ({ onBack }) => {
 
   const uniqueCategories = useMemo(() => [...new Set(materials.map(m => m.category))], [materials]);
   const uniqueSuppliers = useMemo(() => [...new Set(materials.map(m => m.supplier))], [materials]);
+
+  const hasCapelladaMaterials = useMemo(() => {
+    const capelladaCategories = ['Cuero Natural', 'Cuero Sintético', 'Tela', 'Malla', 'Sintéticos Especiales', 'Textiles no Tejidos', 'Elásticos', 'Espumas', 'Tejidos Técnicos'];
+    return materials.some(m => capelladaCategories.includes(m.category));
+  }, [materials]);
+
+  const hasEnsamblajeMaterials = useMemo(() => {
+    const ensamblajeCategories = ['Pegamentos', 'Fijaciones', 'Hilos y Agujas', 'Refuerzos', 'Componentes'];
+    return materials.some(m => ensamblajeCategories.includes(m.category));
+  }, [materials]);
+
+  const hasSuelaMaterials = useMemo(() => {
+    const suelaCategories = ['Cauchos', 'Polímeros para Suela', 'Laminados para Suela', 'Naturales para Suela'];
+    return materials.some(m => suelaCategories.includes(m.category));
+  }, [materials]);
+
+  const hasArmadoMaterials = useMemo(() => {
+    const armadoCategories = ['Componentes de Armado', 'Componentes Estructurales', 'Plantillas y Espumas', 'Refuerzos'];
+    return materials.some(m => armadoCategories.includes(m.category));
+  }, [materials]);
 
   const lowStockItems = useMemo(() =>
     materials.filter(material => material.stock <= 20), // Stock bajo se considera <= 20
@@ -512,6 +532,70 @@ const RawMaterialInventory = ({ onBack }) => {
     setLoadingMaterials(false);
   };
 
+  const handleAddCapelladaMaterials = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas añadir la lista predefinida de materiales para corte y capellada? Esta acción solo se ejecutará si los materiales no existen.')) {
+      return;
+    }
+    setLoadingMaterials(true);
+    try {
+      const result = await rawMaterialService.seedCapelladaMaterials();
+      alert(result.message || `Se han añadido ${result.count} nuevos materiales de corte y capellada.`);
+      await fetchRawMaterials();
+    } catch (error) {
+      console.error("Error al añadir materiales de capellada:", error);
+      alert("Ocurrió un error al añadir los materiales.");
+    }
+    setLoadingMaterials(false);
+  };
+
+  const handleAddEnsamblajeMaterials = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas añadir la lista predefinida de materiales de ensamblaje? Esta acción solo se ejecutará si los materiales no existen.')) {
+      return;
+    }
+    setLoadingMaterials(true);
+    try {
+      const result = await rawMaterialService.seedEnsamblajeMaterials();
+      alert(result.message || `Se han añadido ${result.count} nuevos materiales de ensamblaje.`);
+      await fetchRawMaterials();
+    } catch (error) {
+      console.error("Error al añadir materiales de ensamblaje:", error);
+      alert("Ocurrió un error al añadir los materiales.");
+    }
+    setLoadingMaterials(false);
+  };
+
+  const handleAddSuelaMaterials = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas añadir la lista predefinida de materiales para suela? Esta acción solo se ejecutará si los materiales no existen.')) {
+      return;
+    }
+    setLoadingMaterials(true);
+    try {
+      const result = await rawMaterialService.seedSuelaMaterials();
+      alert(result.message || `Se han añadido ${result.count} nuevos materiales de suela.`);
+      await fetchRawMaterials();
+    } catch (error) {
+      console.error("Error al añadir materiales de suela:", error);
+      alert("Ocurrió un error al añadir los materiales.");
+    }
+    setLoadingMaterials(false);
+  };
+
+  const handleAddArmadoMaterials = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas añadir la lista predefinida de materiales de armado y componentes? Esta acción solo se ejecutará si los materiales no existen.')) {
+      return;
+    }
+    setLoadingMaterials(true);
+    try {
+      const result = await rawMaterialService.seedArmadoMaterials();
+      alert(result.message || `Se han añadido ${result.count} nuevos materiales de armado.`);
+      await fetchRawMaterials();
+    } catch (error) {
+      console.error("Error al añadir materiales de armado:", error);
+      alert("Ocurrió un error al añadir los materiales.");
+    }
+    setLoadingMaterials(false);
+  };
+
   const renderListView = () => (
     <>
       <div className="inventory-filters">
@@ -549,6 +633,26 @@ const RawMaterialInventory = ({ onBack }) => {
           <button className="btn btn-primary" onClick={() => { setEditingMaterial(null); setIsNewMaterialModalOpen(true); }}><FaPlus /> Nuevo Material</button>
           <button className="btn btn-success" onClick={() => openMovementModal('entrada')}><FaPlus /> Registrar Entrada</button>
           <button className="btn btn-warning" onClick={() => openMovementModal('salida')}><FaMinus /> Registrar Salida</button>
+          {!hasCapelladaMaterials && !loadingMaterials && (
+            <button className="btn btn-info" onClick={handleAddCapelladaMaterials}>
+              <FaShoePrints /> Añadir Materiales de Corte
+            </button>
+          )}
+          {!hasEnsamblajeMaterials && !loadingMaterials && (
+            <button className="btn btn-info" onClick={handleAddEnsamblajeMaterials}>
+              <FaHammer /> Añadir Materiales de Ensamblaje
+            </button>
+          )}
+          {!hasSuelaMaterials && !loadingMaterials && (
+            <button className="btn btn-info" onClick={handleAddSuelaMaterials}>
+              <FaCubes /> Añadir Materiales de Suela
+            </button>
+          )}
+          {!hasArmadoMaterials && !loadingMaterials && (
+            <button className="btn btn-info" onClick={handleAddArmadoMaterials}>
+              <FaLayerGroup /> Añadir Materiales de Armado
+            </button>
+          )}
           <button className="btn btn-info" onClick={() => setCurrentView(VIEWS.REPORTS)}><FaChartBar /> Ver Reportes</button>
           {materials.length === 0 && !loadingMaterials && (
             <button className="btn btn-debug" onClick={handleCreateTestData}>
