@@ -13,7 +13,8 @@ const VIEWS = {
   DASHBOARD: 'dashboard',
   NEW_SALE: 'new_sale',
   PRODUCTS: 'products',
-  RAW_MATERIAL_INVENTORY: 'raw_material_inventory'
+  RAW_MATERIAL_INVENTORY: 'raw_material_inventory',
+  ALL_SALES: 'all_sales'
 };
 
 // Componente para mostrar estadísticas resumidas
@@ -162,8 +163,10 @@ function HomePage() {
   const { currentUser } = useAuth();
   const [currentView, setCurrentView] = useState(VIEWS.DASHBOARD);
   const [sales, setSales] = useState([]);
+  const [allSales, setAllSales] = useState([]);
   const [selectedSale, setSelectedSale] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [allSalesSearchTerm, setAllSalesSearchTerm] = useState('');
   
   // Cargar ventas
   const loadSales = async () => {
@@ -183,6 +186,24 @@ function HomePage() {
   useEffect(() => {
     loadSales();
   }, []);
+
+  // Cargar todas las ventas cuando se entra a la vista de Ventas Totales
+  useEffect(() => {
+    const loadAllSales = async () => {
+      if (currentView !== VIEWS.ALL_SALES) return;
+      try {
+        setLoading(true);
+        const data = await saleService.getAllSales();
+        setAllSales(data);
+      } catch (error) {
+        console.error('Error cargando ventas totales:', error);
+        alert('Error al cargar las ventas totales');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAllSales();
+  }, [currentView]);
 
   // Manejar selección de venta
   const handleSelectSale = (sale) => {
@@ -222,6 +243,29 @@ function HomePage() {
     }
   };
 
+  // Generar ventas de prueba entre 7 de octubre 2025 y hoy
+  const handleSeedOctoberSales = async () => {
+    if (!currentUser) return;
+
+    const start = new Date(2025, 9, 7); // Mes base 0 => 9 = Octubre
+    const today = new Date();
+
+    const confirmed = window.confirm(`¿Generar entre 1 a 5 ventas diarias desde el ${start.toLocaleDateString()} hasta hoy?`);
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      const created = await saleService.seedSalesBetweenDates(start, today, currentUser.uid);
+      await loadSales();
+      alert(`Se generaron ${created} ventas de prueba.`);
+    } catch (err) {
+      console.error('Error al generar ventas de prueba:', err);
+      alert('No se pudieron generar las ventas de prueba.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Renderizar vista actual
   const renderCurrentView = () => {
     switch (currentView) {
@@ -240,6 +284,148 @@ function HomePage() {
       case VIEWS.RAW_MATERIAL_INVENTORY:
         return <RawMaterialInventory onBack={() => setCurrentView(VIEWS.DASHBOARD)} />;
 
+      case VIEWS.ALL_SALES:
+        return (
+          <div className="dashboard-container">
+            <div className="dashboard-header">
+              <h1>📑 Ventas Totales</h1>
+              <div className="dashboard-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentView(VIEWS.DASHBOARD)}
+                  disabled={loading}
+                >
+                  ← Volver
+                </button>
+              </div>
+            </div>
+
+            {loading && (
+              <div className="loading-overlay">
+                <div className="spinner"></div>
+                <p>Cargando ventas...</p>
+              </div>
+            )}
+
+            {/* Resumen superior basado en TODAS las ventas */}
+            <div className="stats-grid" style={{ marginTop: '1rem' }}>
+              <div className="stat-card">
+                <div className="stat-icon">
+                  <FaChartLine />
+                </div>
+                <div className="stat-content">
+                  <h3>{allSales.length}</h3>
+                  <p>Ventas Totales</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon revenue">
+                  <FaDollarSign />
+                </div>
+                <div className="stat-content">
+                  <h3>
+                    S/ {allSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h3>
+                  <p>Ingresos Totales</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon pending">
+                  <FaBoxOpen />
+                </div>
+                <div className="stat-content">
+                  <h3>{allSales.filter(s => (s.status || '').toLowerCase() === 'pendiente').length}</h3>
+                  <p>Ventas Pendientes</p>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon completed">
+                  <FaStore />
+                </div>
+                <div className="stat-content">
+                  <h3>{allSales.filter(s => (s.status || '').toLowerCase() === 'entregado').length}</h3>
+                  <p>Ventas Entregadas</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Buscador por número de venta */}
+            <div className="search-bar" style={{ margin: '1rem 0', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <label htmlFor="allSalesSearch" style={{ fontWeight: 600 }}>Buscar</label>
+              <input
+                id="allSalesSearch"
+                type="text"
+                className="search-input"
+                placeholder="Buscar por número de venta (ej. VZ-...)"
+                value={allSalesSearchTerm}
+                onChange={(e) => setAllSalesSearchTerm(e.target.value)}
+                style={{ flex: 1, padding: '0.6rem 0.8rem' }}
+              />
+              {allSalesSearchTerm && (
+                <button className="btn btn-secondary" onClick={() => setAllSalesSearchTerm('')}>
+                  Limpiar
+                </button>
+              )}
+            </div>
+
+            <div className="sales-section">
+              <h2>📊 Todas las Ventas</h2>
+              <div className="sales-list">
+                <table className="sales-table">
+                  <thead>
+                    <tr>
+                      <th>Número de Venta</th>
+                      <th>Fecha</th>
+                      <th>Cliente</th>
+                      <th>Distribuidor</th>
+                      <th>Monto Total</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allSales
+                      .filter(s => {
+                        const term = allSalesSearchTerm.trim().toLowerCase();
+                        if (!term) return true;
+                        return (s.saleNumber || '').toLowerCase().includes(term);
+                      })
+                      .map(sale => (
+                      <tr key={sale.id}>
+                        <td>{sale.saleNumber}</td>
+                        <td>{sale.date.toLocaleDateString()}</td>
+                        <td>{sale.client.name}</td>
+                        <td>{sale.distributor.name}</td>
+                        <td>S/ {sale.totalAmount.toFixed(2)}</td>
+                        <td>
+                          <span className={`status-badge status-${sale.status.toLowerCase().replace('_', '-')}`}>
+                            {sale.status.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td>
+                          <button 
+                            onClick={() => handleSelectSale(sale)} 
+                            className="view-details-btn"
+                            disabled={loading}
+                          >
+                            <FaEye /> Ver Detalles
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Vista de detalles reutilizada */}
+            <SaleDetailsView 
+              sale={selectedSale} 
+              onClose={() => setSelectedSale(null)} 
+            />
+          </div>
+        );
+
       
       default: // VIEWS.DASHBOARD
         return (
@@ -252,6 +438,23 @@ function HomePage() {
                   onClick={() => setCurrentView(VIEWS.NEW_SALE)}
                 >
                   <FaFileInvoiceDollar /> Nueva Venta
+                </button>
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => setCurrentView(VIEWS.ALL_SALES)}
+                  disabled={loading}
+                  title="Ver todas las ventas registradas"
+                >
+                  Ventas Totales
+                </button>
+                <button 
+                  className="btn btn-debug"
+                  onClick={handleSeedOctoberSales}
+                  disabled={loading}
+                  title="Genera ventas de prueba desde el 7/10/2025 hasta hoy"
+                  style={{ backgroundColor: '#0ea5e9', color: 'white' }}
+                >
+                  🧪 Generar Ventas (Oct 7 → Hoy)
                 </button>
                 <button 
                   className="btn btn-secondary"
