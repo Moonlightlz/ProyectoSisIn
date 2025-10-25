@@ -554,6 +554,13 @@
   color: #475569;
 }
 
+.loading-cell {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+  font-style: italic;
+}
+
 .movement-badge {
   padding: 4px 10px;
   border-radius: 12px;

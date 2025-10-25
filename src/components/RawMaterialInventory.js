@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaPlus, FaMinus, FaSync, FaFileAlt, FaWarehouse, FaChartBar, FaArrowLeft, FaPencilAlt, FaTrash, FaSlidersH, FaHistory, FaIdCard, FaFileExcel, FaFilePdf, FaCalendarAlt, FaSearch, FaFileInvoice, FaFileDownload, FaExclamationTriangle } from 'react-icons/fa';
 import './RawMaterialInventory.css';
 import jsPDF from 'jspdf';
@@ -9,6 +9,7 @@ import StockMovementModal from './StockMovementModal'; // Importar el modal de m
 import SupplierDetailView from './SupplierDetailView'; // Importar la vista de detalle del proveedor
 import MovementDetailModal from './MovementDetailModal'; // Importar el modal de detalle de movimiento
 import MaterialSelectionModal from './MaterialSelectionModal'; // Importar modal de selección de material
+import PurchaseOrderModal from './PurchaseOrderModal'; // Importar modal de orden de compra
 
 // Mock data for raw materials
 const mockRawMaterials = [
@@ -60,15 +61,21 @@ const RawMaterialInventory = ({ onBack }) => {
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [isMovementDetailModalOpen, setIsMovementDetailModalOpen] = useState(false);
   const [isMaterialSelectionModalOpen, setIsMaterialSelectionModalOpen] = useState(false);
+  const [isPurchaseOrderModalOpen, setIsPurchaseOrderModalOpen] = useState(false);
   const [reportSelectedMaterial, setReportSelectedMaterial] = useState(null);
   const [selectedMovement, setSelectedMovement] = useState(null);
   const [movementMaterialId, setMovementMaterialId] = useState(null);
   const [movementType, setMovementType] = useState('entrada');
   const [filterName, setFilterName] = useState('');
   const [filterLowStock, setFilterLowStock] = useState(false);
+  const [loadingMaterials, setLoadingMaterials] = useState(true);
 
   const uniqueCategories = useMemo(() => [...new Set(materials.map(m => m.category))], [materials]);
   const uniqueSuppliers = useMemo(() => [...new Set(mockRawMaterials.map(m => m.supplier))], []);
+
+  const lowStockItems = useMemo(() => 
+    materials.filter(material => material.stock <= material.lowStockThreshold),
+  [materials]);
 
   const filteredMaterials = useMemo(() => {
     return materials.filter(material => {
@@ -84,6 +91,22 @@ const RawMaterialInventory = ({ onBack }) => {
       return categoryMatch && supplierMatch && nameMatch && lowStockMatch;
     });
   }, [materials, filterCategory, filterSupplier, filterName, filterLowStock]);
+
+  const fetchRawMaterials = async () => {
+    setLoadingMaterials(true);
+    console.log("Refrescando datos de materiales...");
+    // Simulación de llamada a API
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setMaterials(mockRawMaterials);
+    setLoadingMaterials(false);
+    console.log("Datos de materiales actualizados.");
+  };
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    fetchRawMaterials();
+  }, []);
+
 
   const getStockIndicator = (stock, threshold) => {
     if (stock <= threshold) return 'low';
@@ -157,6 +180,17 @@ const RawMaterialInventory = ({ onBack }) => {
     const supplier = mockSuppliers.find(s => s.name === supplierName);
     setSelectedSupplier(supplier);
     setCurrentView(VIEWS.SUPPLIER_DETAIL);
+  };
+
+  const handleGeneratePurchaseOrder = (orderData) => {
+    console.log("Generando Orden de Compra (frontend):", orderData);
+    // Aquí iría la lógica para crear la orden de compra en el backend
+    setIsPurchaseOrderModalOpen(false);
+  };
+
+  const handleRefreshAlerts = () => {
+    console.log("Actualizando alertas...");
+    fetchRawMaterials();
   };
 
   const handleSelectMaterialForReport = (material) => {
@@ -352,7 +386,7 @@ const RawMaterialInventory = ({ onBack }) => {
         </div>
         <div className="action-group-right">
           {/* Por ahora, este botón no tiene lógica, pero está listo para conectarse */}
-          <button className="btn btn-secondary"><FaSync /> Actualizar Lista</button>
+          <button className="btn btn-secondary" onClick={fetchRawMaterials} disabled={loadingMaterials}><FaSync /> {loadingMaterials ? 'Actualizando...' : 'Actualizar Lista'}</button>
         </div>
       </div>
 
@@ -369,36 +403,31 @@ const RawMaterialInventory = ({ onBack }) => {
             </tr>
           </thead>
           <tbody>
-            {filteredMaterials.map(material => (
-              <tr key={material.id}>
-                <td>{material.name}</td>
-                <td>{material.category}</td>
-                <td>{material.supplier}</td>
-                <td>{material.stock} {material.unit}</td>
-                <td>
-                  <span className={`stock-indicator ${getStockIndicator(material.stock, material.lowStockThreshold)}`}>
-                    ●
-                  </span>
-                </td>
-                <td>
-                  <div className="table-actions">
-                    <button 
-                      className="btn-table-action btn-details" 
-                      onClick={() => { setSelectedMaterial(material); setCurrentView(VIEWS.DETAIL); }}
-                    >
-                      <FaFileAlt />
-                    </button>
-                    <button className="btn-table-action btn-edit">
-                      <FaPencilAlt />
-                    </button>
-                    <button className="btn-table-action btn-delete">
-                      <FaTrash />
-                    </button>
-                    <button className="btn-table-action btn-adjust">Ajustar Stock</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {loadingMaterials ? (
+              <tr><td colSpan="6" className="loading-cell">Cargando materiales...</td></tr>
+            ) : (
+              filteredMaterials.map(material => (
+                <tr key={material.id}>
+                  <td>{material.name}</td>
+                  <td>{material.category}</td>
+                  <td>{material.supplier}</td>
+                  <td>{material.stock} {material.unit}</td>
+                  <td>
+                    <span className={`stock-indicator ${getStockIndicator(material.stock, material.lowStockThreshold)}`}>
+                      ●
+                    </span>
+                  </td>
+                  <td>
+                    <div className="table-actions">
+                      <button className="btn-table-action btn-details" onClick={() => { setSelectedMaterial(material); setCurrentView(VIEWS.DETAIL); }}><FaFileAlt /></button>
+                      <button className="btn-table-action btn-edit"><FaPencilAlt /></button>
+                      <button className="btn-table-action btn-delete"><FaTrash /></button>
+                      <button className="btn-table-action btn-adjust">Ajustar Stock</button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -480,10 +509,6 @@ const RawMaterialInventory = ({ onBack }) => {
   );
 
   const renderReportsView = () => {
-    const lowStockItems = materials.filter(
-      (material) => material.stock <= material.lowStockThreshold
-    );
-
     return (
       <div className="reports-view-container">
         <div className="reports-tabs">
@@ -563,8 +588,8 @@ const RawMaterialInventory = ({ onBack }) => {
               <div className="detail-section-header">
                 <h4><FaExclamationTriangle /> Alertas de Stock Bajo</h4>
                 <div className="detail-section-actions">
-                  <button className="btn btn-sm btn-secondary"><FaSync /> Actualizar Alertas</button>
-                  <button className="btn btn-sm btn-success"><FaFileInvoice /> Generar Orden de Compra</button>
+                  <button className="btn btn-sm btn-secondary" onClick={handleRefreshAlerts} disabled={loadingMaterials}><FaSync /> {loadingMaterials ? 'Actualizando...' : 'Actualizar Alertas'}</button>
+                  <button className="btn btn-sm btn-success" disabled={lowStockItems.length === 0} onClick={() => setIsPurchaseOrderModalOpen(true)}><FaFileInvoice /> Generar Orden de Compra</button>
                 </div>
               </div>
               {lowStockItems.length > 0 ? (
@@ -682,6 +707,12 @@ const RawMaterialInventory = ({ onBack }) => {
         onClose={() => setIsMaterialSelectionModalOpen(false)}
         onSelect={handleSelectMaterialForReport}
         materials={materials}
+      />
+      <PurchaseOrderModal
+        isOpen={isPurchaseOrderModalOpen}
+        onClose={() => setIsPurchaseOrderModalOpen(false)}
+        onGenerate={handleGeneratePurchaseOrder}
+        lowStockItems={lowStockItems}
       />
     </div>
   );
