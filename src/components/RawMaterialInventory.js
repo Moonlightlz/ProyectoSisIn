@@ -9,6 +9,7 @@ import StockMovementModal from './StockMovementModal'; // Importar el modal de m
 import SupplierDetailView from './SupplierDetailView'; // Importar la vista de detalle del proveedor
 import MovementDetailModal from './MovementDetailModal'; // Importar el modal de detalle de movimiento
 import MaterialSelectionModal from './MaterialSelectionModal'; // Importar modal de selección de material
+import ConfirmationModal from './ConfirmationModal'; // Importar modal de confirmación
 import PurchaseOrderModal from './PurchaseOrderModal'; // Importar modal de orden de compra
 
 // Mock data for raw materials
@@ -62,6 +63,8 @@ const RawMaterialInventory = ({ onBack }) => {
   const [isMovementDetailModalOpen, setIsMovementDetailModalOpen] = useState(false);
   const [isMaterialSelectionModalOpen, setIsMaterialSelectionModalOpen] = useState(false);
   const [isPurchaseOrderModalOpen, setIsPurchaseOrderModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] = useState(false);
+  const [deletingMaterial, setDeletingMaterial] = useState(null);
   const [reportSelectedMaterial, setReportSelectedMaterial] = useState(null);
   const [selectedMovement, setSelectedMovement] = useState(null);
   const [movementMaterialId, setMovementMaterialId] = useState(null);
@@ -210,6 +213,21 @@ const RawMaterialInventory = ({ onBack }) => {
     setSelectedSupplier(supplier);
     setCurrentView(VIEWS.SUPPLIER_DETAIL);
   };
+
+  const handleDeleteClick = (material) => {
+    setDeletingMaterial(material);
+    setIsConfirmDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingMaterial) return;
+    console.log("Eliminando material (frontend):", deletingMaterial.id);
+    // Lógica para eliminar en el backend
+    setMaterials(prev => prev.filter(m => m.id !== deletingMaterial.id));
+    setDeletingMaterial(null);
+    setIsConfirmDeleteModalOpen(false);
+  };
+
 
   const handleGeneratePurchaseOrder = (orderData) => {
     console.log("Generando Orden de Compra (frontend):", orderData);
@@ -526,7 +544,7 @@ const RawMaterialInventory = ({ onBack }) => {
                   <td>
                     <div className="table-actions">
                       <button className="btn-table-action btn-details" onClick={() => { setSelectedMaterial(material); setCurrentView(VIEWS.DETAIL); }}><FaFileAlt /></button>                      <button className="btn-table-action btn-edit" onClick={() => { setEditingMaterial(material); setIsNewMaterialModalOpen(true); }}><FaPencilAlt /></button>
-                      <button className="btn-table-action btn-delete"><FaTrash /></button>
+                      <button className="btn-table-action btn-delete" onClick={() => handleDeleteClick(material)}><FaTrash /></button>
                       <button className="btn-table-action btn-adjust">Ajustar Stock</button>
                     </div>
                   </td>
@@ -834,6 +852,16 @@ const RawMaterialInventory = ({ onBack }) => {
         onGenerate={handleGeneratePurchaseOrder}
         lowStockItems={lowStockItems}
       />
+      <ConfirmationModal
+        isOpen={isConfirmDeleteModalOpen}
+        onClose={() => setIsConfirmDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirmar Eliminación"
+      >
+        <p>
+          ¿Estás seguro de que deseas eliminar el material <strong>{deletingMaterial?.name}</strong>? Esta acción no se puede deshacer.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 };

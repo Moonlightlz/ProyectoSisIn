@@ -1,0 +1,19 @@
+.confirmation-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.confirmation-modal .modal-title {
+  color: #d97706; /* amber-600 */
+}
+
+.confirmation-modal .modal-body {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.confirmation-modal .modal-body strong {
+  color: #1e293b;
+  font-weight: 600;
+}
