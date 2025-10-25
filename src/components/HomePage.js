@@ -6,7 +6,10 @@ import ProductManagement from './ProductManagement';
 import NewSaleForm from './NewSaleForm';
 import RawMaterialInventory from './RawMaterialInventory'; // Importamos el nuevo componente
 import './HomePage.css';
-import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaCog, FaChartLine, FaFileInvoiceDollar, FaWarehouse } from 'react-icons/fa';
+import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaCog, FaChartLine, FaFileInvoiceDollar, FaWarehouse, FaFilePdf, FaFileExcel } from 'react-icons/fa';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 // Estado de vista actual
 const VIEWS = {
@@ -167,6 +170,98 @@ function HomePage() {
   const [selectedSale, setSelectedSale] = useState(null);
   const [loading, setLoading] = useState(false);
   const [allSalesSearchTerm, setAllSalesSearchTerm] = useState('');
+
+  // Exportar TODAS las ventas a Excel
+  const handleExportAllSalesToExcel = () => {
+    try {
+      const data = allSales
+        .filter(s => {
+          const term = allSalesSearchTerm.trim().toLowerCase();
+          if (!term) return true;
+          return (s.saleNumber || '').toLowerCase().includes(term);
+        })
+        .map(s => ([
+          s.saleNumber,
+          s.date ? s.date.toLocaleDateString() : '',
+          s.client?.name || '',
+          s.distributor?.name || '',
+          (s.totalAmount ?? 0),
+          (s.status || '').replace('_', ' '),
+        ]));
+
+      if (data.length === 0) {
+        alert('No hay datos para exportar.');
+        return;
+      }
+
+      const header = ['Número de Venta', 'Fecha', 'Cliente', 'Distribuidor', 'Monto Total', 'Estado'];
+      const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+      // Formatear la columna de monto como número con 2 decimales en Excel
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let r = 1; r <= range.e.r; r++) {
+        const cellAddr = XLSX.utils.encode_cell({ r, c: 4 });
+        if (ws[cellAddr] && typeof ws[cellAddr].v === 'number') {
+          ws[cellAddr].t = 'n';
+          ws[cellAddr].z = '#,##0.00';
+        }
+      }
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+      const today = new Date();
+      const file = `ventas_totales_${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}.xlsx`;
+      XLSX.writeFile(wb, file);
+    } catch (err) {
+      console.error('Error exportando a Excel:', err);
+      alert('No se pudo exportar a Excel.');
+    }
+  };
+
+  // Exportar TODAS las ventas a PDF
+  const handleExportAllSalesToPDF = () => {
+    try {
+      const rows = allSales
+        .filter(s => {
+          const term = allSalesSearchTerm.trim().toLowerCase();
+          if (!term) return true;
+          return (s.saleNumber || '').toLowerCase().includes(term);
+        })
+        .map(s => ([
+          s.saleNumber,
+          s.date ? s.date.toLocaleDateString() : '',
+          s.client?.name || '',
+          s.distributor?.name || '',
+          `S/ ${(s.totalAmount ?? 0).toFixed(2)}`,
+          (s.status || '').replace('_', ' '),
+        ]));
+
+      if (rows.length === 0) {
+        alert('No hay datos para exportar.');
+        return;
+      }
+
+      const doc = new jsPDF({ orientation: 'landscape' });
+      // Encabezado con info de empresa
+      doc.setFontSize(12);
+      doc.text('INDUSTRIA PROCESADORA DEL CALZADO S.A.C.', 14, 12);
+      doc.text('RUC: 20601875692', 14, 18);
+      doc.text('JR. PANAMA NRO. 191 LIMA - LIMA - COMAS', 14, 24);
+      doc.setFontSize(14);
+      doc.text('Ventas Totales', 14, 34);
+      autoTable(doc, {
+        head: [['Número de Venta', 'Fecha', 'Cliente', 'Distribuidor', 'Monto Total', 'Estado']],
+        body: rows,
+        startY: 40,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [30, 41, 59] },
+      });
+      const today = new Date();
+      const file = `ventas_totales_${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}.pdf`;
+      doc.save(file);
+    } catch (err) {
+      console.error('Error exportando a PDF:', err);
+      alert('No se pudo exportar a PDF.');
+    }
+  };
   
   // Cargar ventas
   const loadSales = async () => {
@@ -261,7 +356,13 @@ function HomePage() {
       case VIEWS.RAW_MATERIAL_INVENTORY:
         return <RawMaterialInventory onBack={() => setCurrentView(VIEWS.DASHBOARD)} />;
 
-      case VIEWS.ALL_SALES:
+      case VIEWS.ALL_SALES: {
+        const filteredSales = allSales.filter(s => {
+          const term = allSalesSearchTerm.trim().toLowerCase();
+          if (!term) return true;
+          return (s.saleNumber || '').toLowerCase().includes(term);
+        });
+        const totalFilteredAmount = filteredSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
         return (
           <div className="dashboard-container">
             <div className="dashboard-header">
@@ -274,7 +375,30 @@ function HomePage() {
                 >
                   ← Volver
                 </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleExportAllSalesToExcel}
+                  disabled={loading || allSales.length === 0}
+                  title="Exportar a Excel"
+                >
+                  <FaFileExcel /> Exportar Excel
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleExportAllSalesToPDF}
+                  disabled={loading || allSales.length === 0}
+                  title="Exportar a PDF"
+                >
+                  <FaFilePdf /> Exportar PDF
+                </button>
               </div>
+            </div>
+
+            {/* Información de la empresa */}
+            <div className="company-info" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
+              <div style={{ fontWeight: 700 }}>INDUSTRIA PROCESADORA DEL CALZADO S.A.C.</div>
+              <div>RUC: 20601875692</div>
+              <div>JR. PANAMA NRO. 191 LIMA - LIMA - COMAS</div>
             </div>
 
             {loading && (
@@ -361,13 +485,7 @@ function HomePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allSales
-                      .filter(s => {
-                        const term = allSalesSearchTerm.trim().toLowerCase();
-                        if (!term) return true;
-                        return (s.saleNumber || '').toLowerCase().includes(term);
-                      })
-                      .map(sale => (
+                    {filteredSales.map(sale => (
                       <tr key={sale.id}>
                         <td>{sale.saleNumber}</td>
                         <td>{sale.date.toLocaleDateString()}</td>
@@ -391,6 +509,13 @@ function HomePage() {
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="4" style={{ textAlign: 'right', fontWeight: 600 }}>Total</td>
+                      <td style={{ fontWeight: 700 }}>S/ {totalFilteredAmount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td colSpan="2"></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -402,6 +527,7 @@ function HomePage() {
             />
           </div>
         );
+      }
 
       
       default: // VIEWS.DASHBOARD
