@@ -277,9 +277,9 @@ const RawMaterialInventory = ({ onBack }) => {
       doc.setFontSize(12);
       doc.text('EMITIDO POR:', 20, 40);
       doc.setFontSize(10);
-      doc.text('Calzados S.A.C.', 20, 46);
-      doc.text('Av. Producción 123, Trujillo, Perú', 20, 51);
-      doc.text('RUC: 20123456789', 20, 56);
+      doc.text('INDUSTRIA PROCESADORA DEL CALZADO S.A.C.', 20, 46);
+      doc.text('JR. PANAMA NRO. 191 LIMA - LIMA - COMAS', 20, 51);
+      doc.text('RUC: 20601875692', 20, 56);
 
       // Datos del proveedor (Receptor)
       doc.setFontSize(12);
