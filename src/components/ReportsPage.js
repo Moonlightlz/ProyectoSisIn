@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { saleService } from '../services/saleService';
 import { workerService, attendanceService } from '../services/workerService';
+import { rawMaterialService } from './rawMaterialService'; // Importar servicio de materia prima
 import WorkerPayrollService from '../services/workerPayrollService';
-import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar } from 'react-icons/fa';
+import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar, FaWarehouse } from 'react-icons/fa';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import './ReportsPage.css';
@@ -407,6 +408,76 @@ const BonusCandidates = ({ workerHoursData }) => {
   );
 };
 
+// --- NUEVO GRÁFICO DE ALERTAS DE STOCK ---
+const LowStockChart = ({ materials }) => {
+  if (!materials || materials.length === 0) {
+    return (
+      <div className="chart-card no-data-chart">
+        <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+        <div className="no-data-message">
+          <FaExclamationCircle size={30} />
+          <p>No hay datos de inventario para mostrar.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const lowStockItems = materials
+    .filter(m => m.stock <= (m.lowStockThreshold || 20))
+    .sort((a, b) => a.stock - b.stock) // Ordenar por el stock más bajo primero
+    .slice(0, 5); // Mostrar los 5 más críticos
+
+  if (lowStockItems.length === 0) {
+    return (
+      <div className="chart-card">
+        <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+        <div className="no-data-message">
+          <p>✅ No hay materiales con stock bajo actualmente.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const data = {
+    labels: lowStockItems.map(p => `${p.name} (${p.stock} ${p.unit})`),
+    datasets: [
+      {
+        label: 'Stock Actual',
+        data: lowStockItems.map(p => p.stock),
+        backgroundColor: [
+          'rgba(239, 68, 68, 0.8)',   // Rojo
+          'rgba(249, 115, 22, 0.8)',  // Naranja
+          'rgba(245, 158, 11, 0.8)', // Ámbar
+          'rgba(234, 179, 8, 0.8)',   // Amarillo
+          'rgba(252, 211, 77, 0.8)', // Amarillo claro
+        ],
+        borderColor: '#ffffff',
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    aspectRatio: 1.2,
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: 'Top 5 Materiales con Stock Crítico',
+        font: { size: 16, family: "'Poppins', sans-serif" },
+        color: '#334155'
+      },
+    },
+  };
+
+  return (
+    <div className="chart-card">
+      <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+      <Pie data={data} options={options} />
+    </div>
+  );
+};
 // --- FIN DE NUEVOS COMPONENTES ---
 
 function ReportsPage() {
@@ -415,6 +486,7 @@ function ReportsPage() {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [workerHoursData, setWorkerHoursData] = useState([]);
+  const [rawMaterials, setRawMaterials] = useState([]); // Estado para materias primas
 
   useEffect(() => {
     const fetchData = async () => {
@@ -424,13 +496,15 @@ function ReportsPage() {
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
 
-        const [salesData, workersData, attendanceData] = await Promise.all([
+        const [salesData, workersData, attendanceData, materialsData] = await Promise.all([
           saleService.getAllSales(),
           workerService.getAllWorkers(),
-          attendanceService.getAttendanceForDateRange(startOfMonth, endOfMonth)
+          attendanceService.getAttendanceForDateRange(startOfMonth, endOfMonth),
+          rawMaterialService.getRawMaterials() // Cargar materias primas
         ]);
         console.log("Datos de ventas cargados:", salesData); // Log de depuración
         console.log("Datos de trabajadores cargados:", workersData); // Log de depuración
+        console.log("Datos de inventario cargados:", materialsData); // Log de depuración
         console.log("Datos de asistencia cargados:", attendanceData); // Log de depuración
         try {
           const countsByWorker = (attendanceData || []).reduce((acc, r) => {
@@ -445,6 +519,7 @@ function ReportsPage() {
         setSales(salesData);
         setWorkers(workersData);
         setAttendance(attendanceData);
+        setRawMaterials(materialsData); // Guardar materias primas en el estado
 
         // Calcular workerHoursData con reglas corregidas (basado en asistencia)
         const baseHoursData = computeWorkerHoursData(attendanceData);
@@ -535,6 +610,7 @@ function ReportsPage() {
       <div className="charts-grid">
         <SalesChart sales={sales} />
         <WorkerChart workers={workers} />
+        <LowStockChart materials={rawMaterials} />
         <BestSellingProductsChart sales={sales} />
         <WorkerHoursTable workerHoursData={workerHoursData} />
         <BonusCandidates workerHoursData={workerHoursData} />
