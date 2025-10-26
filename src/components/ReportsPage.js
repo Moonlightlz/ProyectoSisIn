@@ -123,10 +123,15 @@ const SalesChart = ({ sales }) => {
   if (!sales || sales.length === 0) {
     return (
       <div className="chart-card no-data-chart">
-        <h3><FaChartPie /> Ventas por Estado</h3>
+        <div className="chart-header">
+          <h3><FaChartPie /> Ventas por Estado</h3>
+        </div>
         <div className="no-data-message">
           <FaExclamationCircle size={30} />
           <p>No hay datos de ventas para mostrar.</p>
+        </div>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
         </div>
       </div>
     );
@@ -173,8 +178,13 @@ const SalesChart = ({ sales }) => {
 
   return (
     <div className="chart-card">
-      <h3><FaChartPie /> Ventas por Estado</h3>
+      <div className="chart-header">
+        <h3><FaChartPie /> Ventas por Estado</h3>
+      </div>
       <Pie data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -227,10 +237,15 @@ const WorkerChart = ({ workers }) => {
   if (!workers || workers.length === 0) {
     return (
       <div className="chart-card no-data-chart">
-        <h3><FaChartPie /> Trabajadores por Estado</h3>
+        <div className="chart-header">
+          <h3><FaChartPie /> Trabajadores por Estado</h3>
+        </div>
         <div className="no-data-message">
           <FaExclamationCircle size={30} />
           <p>No hay datos de trabajadores para mostrar.</p>
+        </div>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
         </div>
       </div>
     );
@@ -274,8 +289,13 @@ const WorkerChart = ({ workers }) => {
 
   return (
     <div className="chart-card">
-      <h3><FaChartPie /> Trabajadores por Estado</h3>
+      <div className="chart-header">
+        <h3><FaChartPie /> Trabajadores por Estado</h3>
+      </div>
       <Pie data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -307,8 +327,11 @@ const WorkerHistoryChart = ({ workers }) => {
   const options = { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Mes Actual - Trabajadores por Estado (por día)' } } };
   return (
     <div className="chart-card">
-      <h3><FaChartBar /> Trabajadores por Estado (Mes)</h3>
+      <h3><FaChartBar /> Ventas por Estado (Mes)</h3>
       <Line data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -341,10 +364,15 @@ const BestSellingProductsChart = ({ sales }) => {
   if (sortedProducts.length === 0) {
     return (
       <div className="chart-card">
-        <h3><FaChartBar /> Productos Más Vendidos</h3>
+        <div className="chart-header">
+          <h3><FaChartBar /> Productos Más Vendidos</h3>
+        </div>
         <div className="no-data-message">
           <FaExclamationCircle size={30} />
           <p>No hay datos de productos vendidos para mostrar.</p>
+        </div>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
         </div>
       </div>
     );
@@ -398,8 +426,13 @@ const BestSellingProductsChart = ({ sales }) => {
 
   return (
     <div className="chart-card">
-      <h3><FaChartBar /> Productos Más Vendidos</h3>
+      <div className="chart-header">
+        <h3><FaChartBar /> Productos Más Vendidos</h3>
+      </div>
       <Bar data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -409,10 +442,15 @@ const WorkerHoursTable = ({ workerHoursData }) => {
   if (!workerHoursData || workerHoursData.length === 0) {
     return (
       <div className="worker-hours-card">
-        <h3><FaChartBar /> Rendimiento de Empleados (Mes Actual)</h3>
+        <div className="chart-header">
+          <h3><FaChartBar /> Rendimiento de Empleados (Mes Actual)</h3>
+        </div>
         <div className="no-data-message">
           <FaExclamationCircle size={30} />
           <p>No hay registros de asistencia para este mes.</p>
+        </div>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
         </div>
       </div>
     );
@@ -434,7 +472,9 @@ const WorkerHoursTable = ({ workerHoursData }) => {
 
   return (
     <div className="worker-hours-card">
-      <h3><FaChartBar /> Rendimiento de Empleados (Mes Actual)</h3>
+      <div className="chart-header">
+        <h3><FaChartBar /> Rendimiento de Empleados (Mes Actual)</h3>
+      </div>
       <table className="worker-hours-table">
         <thead>
           <tr>
@@ -486,15 +526,22 @@ const BonusCandidates = ({ workerHoursData }) => {
   if (candidates.length === 0) {
     return (
       <div className="bonus-card">
-        <h3><FaStar /> Candidatos a Bono por Horas Extra</h3>
+        <div className="chart-header">
+          <h3><FaStar /> Candidatos a Bono por Horas Extra</h3>
+        </div>
         <p className="no-candidates">Nadie ha superado las 48 horas este mes.</p>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="bonus-card">
-      <h3><FaStar /> Candidatos a Bono por Horas Extra</h3>
+      <div className="chart-header">
+        <h3><FaStar /> Candidatos a Bono por Horas Extra</h3>
+      </div>
       <ul className="candidates-list">
         {candidates.map(candidate => (
           <li key={candidate.name}>
@@ -503,6 +550,9 @@ const BonusCandidates = ({ workerHoursData }) => {
           </li>
         ))}
       </ul>
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -512,10 +562,15 @@ const LowStockChart = ({ materials }) => {
   if (!materials || materials.length === 0) {
     return (
       <div className="chart-card no-data-chart">
-        <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+        <div className="chart-header">
+          <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+        </div>
         <div className="no-data-message">
           <FaExclamationCircle size={30} />
           <p>No hay datos de inventario para mostrar.</p>
+        </div>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
         </div>
       </div>
     );
@@ -529,9 +584,14 @@ const LowStockChart = ({ materials }) => {
   if (lowStockItems.length === 0) {
     return (
       <div className="chart-card">
-        <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+        <div className="chart-header">
+          <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+        </div>
         <div className="no-data-message">
           <p>✅ No hay materiales con stock bajo actualmente.</p>
+        </div>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
         </div>
       </div>
     );
@@ -572,8 +632,13 @@ const LowStockChart = ({ materials }) => {
 
   return (
     <div className="chart-card">
-      <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+      <div className="chart-header">
+        <h3><FaWarehouse /> Alertas de Stock Bajo</h3>
+      </div>
       <Pie data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -583,10 +648,15 @@ const MaterialCategoryChart = ({ materials }) => {
   if (!materials || materials.length === 0) {
     return (
       <div className="chart-card no-data-chart">
-        <h3><FaLayerGroup /> Materiales por Categoría</h3>
+        <div className="chart-header">
+          <h3><FaLayerGroup /> Materiales por Categoría</h3>
+        </div>
         <div className="no-data-message">
           <FaExclamationCircle size={30} />
           <p>No hay datos de inventario para mostrar.</p>
+        </div>
+        <div className="chart-footer">
+          <button className="btn btn-secondary btn-sm">Historial</button>
         </div>
       </div>
     );
@@ -642,10 +712,13 @@ const MaterialCategoryChart = ({ materials }) => {
 
   return (
     <div className="chart-card">
-      <h3>
-        <FaLayerGroup /> Materiales por Categoría
-      </h3>
+      <div className="chart-header">
+        <h3><FaLayerGroup /> Materiales por Categoría</h3>
+      </div>
       <Pie data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -669,8 +742,13 @@ const LowStockHistoryChart = ({ materials }) => {
   const options = { responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Mes Actual - Stock Bajo (aprox.) (por día)' } } };
   return (
     <div className="chart-card">
-      <h3><FaChartBar /> Stock Bajo (Mes, aprox.)</h3>
+      <div className="chart-header">
+        <h3><FaChartBar /> Stock Bajo (Mes, aprox.)</h3>
+      </div>
       <Bar data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -709,8 +787,13 @@ const MaterialCategoryHistoryChart = ({ materials }) => {
   const options = { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Mes Actual - Materiales por Categoría (por día)' } } };
   return (
     <div className="chart-card">
-      <h3><FaChartBar /> Materiales por Categoría (Mes)</h3>
+      <div className="chart-header">
+        <h3><FaChartBar /> Ventas por Estado (Mes)</h3>
+      </div>
       <Line data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -747,8 +830,13 @@ const SalesMonthlyPieChart = ({ sales }) => {
   const options = { responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Ventas por Estado (Mes)' } } };
   return (
     <div className="chart-card">
-      <h3><FaChartPie /> Ventas por Estado (Mes)</h3>
+      <div className="chart-header">
+        <h3><FaChartPie /> Ventas por Estado (Mes)</h3>
+      </div>
       <Pie data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };
@@ -809,8 +897,13 @@ const MaterialCategoryMonthlyBarChart = ({ materials }) => {
   };
   return (
     <div className="chart-card">
-      <h3><FaChartBar /> Materiales por Categoría (Mes)</h3>
+      <div className="chart-header">
+        <h3><FaChartBar /> Materiales por Categoría (Mes)</h3>
+      </div>
       <Bar data={data} options={options} />
+      <div className="chart-footer">
+        <button className="btn btn-secondary btn-sm">Historial</button>
+      </div>
     </div>
   );
 };

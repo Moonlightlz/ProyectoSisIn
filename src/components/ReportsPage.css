@@ -283,3 +283,12 @@
 
 .progress-bar.good { background-color: #10b981; } /* Verde */
 .progress-bar.regular { background-color: #3b82f6; } /* Azul */
+
+.chart-footer {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9; /* Opcional: para separar visualmente */
+}
