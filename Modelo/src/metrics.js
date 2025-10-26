@@ -76,4 +76,170 @@ async function listLowStockRawMaterialsGrouped() {
   return { groups: result, sources };
 }
 
-module.exports = { countSales, listLowStockRawMaterialsGrouped };
+function flattenStrings(obj, prefix = '', out = {}) {
+  if (!obj || typeof obj !== 'object') return out;
+  for (const [k, v] of Object.entries(obj)) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (v == null) continue;
+    if (typeof v === 'string') {
+      out[key] = v;
+    } else if (typeof v === 'number' || typeof v === 'boolean') {
+      out[key] = String(v);
+    } else if (Array.isArray(v)) {
+      // join primitive strings/numbers for search
+      const arrStr = v.map(x => (typeof x === 'object' ? null : String(x))).filter(Boolean).join(' ');
+      if (arrStr) out[key] = arrStr;
+      // also recurse objects
+      v.forEach((x, i) => {
+        if (x && typeof x === 'object') flattenStrings(x, `${key}[${i}]`, out);
+      });
+    } else if (typeof v === 'object') {
+      flattenStrings(v, key, out);
+    }
+  }
+  return out;
+}
+
+function normalizeStr(s) {
+  return String(s || '')
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function findSaleByCode(codeRaw) {
+  try {
+    const db = getDb();
+    const code = normalizeStr(codeRaw).toUpperCase();
+    const coll = 'sales';
+    const snap = await db.collection(coll).get();
+    for (const d of snap.docs) {
+      if (normalizeStr(d.id).toUpperCase() === code) {
+        const data = d.data() || {};
+        return { found: true, sale: { id: d.id, data }, sources: [{ collection: coll, id: d.id }] };
+      }
+      const data = d.data() || {};
+      const flat = flattenStrings(data);
+      const values = Object.values(flat);
+      if (values.some(v => normalizeStr(v).toUpperCase() === code)) {
+        return { found: true, sale: { id: d.id, data }, sources: [{ collection: coll, id: d.id }] };
+      }
+    }
+    return { found: false, sale: null, sources: [] };
+  } catch (_e) {
+    return { found: false, sale: null, sources: [] };
+  }
+}
+
+function extractNameFields(data) {
+  const flat = flattenStrings(data);
+  const candidates = [];
+  for (const [k, v] of Object.entries(flat)) {
+    const lk = k.toLowerCase();
+    if (
+      lk.includes('distrib') ||
+      lk.includes('vendedor') ||
+      lk.includes('seller') ||
+      lk.includes('cliente') ||
+      lk.endsWith('.name') ||
+      lk.endsWith('name') ||
+      lk.includes('usuario') ||
+      lk.includes('responsable')
+    ) {
+      candidates.push(v);
+    }
+  }
+  return candidates;
+}
+
+async function countSalesByDistributor(nameRaw) {
+  try {
+    const db = getDb();
+    const coll = 'sales';
+    const name = normalizeStr(nameRaw);
+    const snap = await db.collection(coll).get();
+    let total = 0;
+    const ids = [];
+    for (const d of snap.docs) {
+      const data = d.data() || {};
+      const names = extractNameFields(data).map(normalizeStr);
+      if (names.some(n => n.includes(name))) {
+        total += 1;
+        if (ids.length < 10) ids.push(d.id);
+      }
+    }
+    return { total, sources: ids.map(id => ({ collection: coll, id })) };
+  } catch (_e) {
+    return { total: 0, sources: [] };
+  }
+}
+
+module.exports = { countSales, listLowStockRawMaterialsGrouped, findSaleByCode, countSalesByDistributor };
+// --- Nuevas métricas: trabajador con menos días trabajados ---
+function startEndOfMonth(date = new Date()) {
+  const start = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0);
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 1, 0, 0, 0, 0);
+  return { start, end };
+}
+
+async function leastWorkedWorker(period = 'month') {
+  try {
+    const db = getDb();
+    const coll = 'attendance';
+    let qSnap;
+    if (period === 'month') {
+      const { start, end } = startEndOfMonth();
+      try {
+        qSnap = await db.collection(coll)
+          .where('timestamp', '>=', start)
+          .where('timestamp', '<', end)
+          .get();
+      } catch (_e) {
+        // Algunos registros podrían usar 'date'/'fecha'
+        const altSnap = await db.collection(coll)
+          .where('date', '>=', start)
+          .where('date', '<', end)
+          .get();
+        qSnap = altSnap;
+      }
+    } else {
+      qSnap = await db.collection(coll).get();
+    }
+    const byWorker = new Map(); // workerId -> { name, days:Set<string>, sampleIds:[] }
+    for (const d of qSnap.docs) {
+      const data = d.data() || {};
+      const workerId = pick(data, ['workerId', 'worker_id', 'worker', 'empleadoId', 'dni'], null) || data.worker?.id || data.worker?.dni || data.id;
+      const workerName = pick(data, ['workerName', 'nombre', 'name'], null) || data.worker?.name || data.worker?.nombre || 'Desconocido';
+      let ts = data.timestamp || data.date || data.fecha || null;
+      if (!ts) continue;
+      // Convertir Timestamp a Date
+      if (ts && typeof ts === 'object' && ts._seconds) {
+        ts = new Date(ts._seconds * 1000);
+      } else if (typeof ts === 'string' || typeof ts === 'number') {
+        ts = new Date(ts);
+      }
+      if (!(ts instanceof Date) || isNaN(ts.getTime())) continue;
+      const dayKey = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}-${String(ts.getDate()).padStart(2, '0')}`;
+      if (!byWorker.has(workerId)) byWorker.set(workerId, { name: workerName, days: new Set(), sampleIds: [] });
+      const rec = byWorker.get(workerId);
+      rec.days.add(dayKey);
+      if (rec.sampleIds.length < 5) rec.sampleIds.push(d.id);
+    }
+    if (byWorker.size === 0) return { worker: null, sources: [] };
+    let minId = null; let minDays = Infinity;
+    for (const [wid, rec] of byWorker.entries()) {
+      const count = rec.days.size;
+      if (count < minDays) { minDays = count; minId = wid; }
+    }
+    const best = byWorker.get(minId);
+    return {
+      worker: { id: minId, name: best.name, daysWorked: minDays },
+      sources: best.sampleIds.map(id => ({ collection: coll, id }))
+    };
+  } catch (_e) {
+    return { worker: null, sources: [] };
+  }
+}
+
+module.exports.leastWorkedWorker = leastWorkedWorker;
