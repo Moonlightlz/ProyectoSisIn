@@ -25,7 +25,9 @@ const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, isLoading }) =
           ) : (
             <div className="analysis-content">
               {analysis ? (
-                <p>{analysis}</p>
+                <div className="ai-response-box">
+                  <p>{analysis}</p>
+                </div>
               ) : (
                 <p className="error-analysis">No se pudo generar el análisis. Inténtalo de nuevo.</p>
               )}
