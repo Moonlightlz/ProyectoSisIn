@@ -136,7 +136,7 @@ const SalesChart = ({ sales }) => {
     responsive: true,
     aspectRatio: 1.2, // <-- Ajusta la proporción para que sea más grande
     plugins: {
-      legend: { position: 'top' },
+      legend: { display: false },
       title: { 
         display: true, 
         text: 'Distribución de Ventas por Estado',
@@ -194,7 +194,7 @@ const WorkerChart = ({ workers }) => {
     responsive: true,
     aspectRatio: 1.2, // <-- Ajusta la proporción para que sea más grande
     plugins: {
-      legend: { position: 'top' },
+      legend: { display: false },
       title: { 
         display: true, 
         text: 'Distribución de Trabajadores por Estado',
