@@ -1,0 +1,40 @@
+import React from 'react';
+import { FaTimes, FaRobot } from 'react-icons/fa';
+import './HistoryAnalysisModal.css';
+
+const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, isLoading }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="history-analysis-modal">
+        <div className="modal-header">
+          <h3 className="modal-title">
+            <FaRobot /> Análisis del Histórico: {title}
+          </h3>
+          <button onClick={onClose} className="modal-close-btn">
+            <FaTimes />
+          </button>
+        </div>
+        <div className="modal-body">
+          {isLoading ? (
+            <div className="loading-analysis">
+              <div className="spinner"></div>
+              <p>Generando análisis con IA...</p>
+            </div>
+          ) : (
+            <div className="analysis-content">
+              {analysis ? (
+                <p>{analysis}</p>
+              ) : (
+                <p className="error-analysis">No se pudo generar el análisis. Inténtalo de nuevo.</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HistoryAnalysisModal;

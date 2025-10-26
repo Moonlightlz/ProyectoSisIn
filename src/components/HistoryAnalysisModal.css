@@ -1,0 +1,64 @@
+.history-analysis-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+  animation: fadeInDetails 0.3s ease-out;
+  overflow: hidden;
+}
+
+.history-analysis-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.history-analysis-modal .modal-title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-analysis-modal .modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.history-analysis-modal .modal-body {
+  padding: 24px;
+  min-height: 150px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-analysis {
+  text-align: center;
+  color: #475569;
+}
+
+.loading-analysis .spinner {
+  margin: 0 auto 15px auto;
+}
+
+.analysis-content p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-wrap; /* Respetar saltos de línea y espacios */
+}
+
+.error-analysis {
+  color: #b91c1c;
+  font-weight: 500;
+}

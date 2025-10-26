@@ -7,6 +7,7 @@ import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar, FaWarehouse, FaLay
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Filler } from 'chart.js';
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import './ReportsPage.css';
+import HistoryAnalysisModal from './HistoryAnalysisModal'; // Importar el nuevo modal
 
 // Utilidad: calcula horas trabajadas por día y totales por trabajador (mes actual)
 function computeWorkerHoursData(attendanceData) {
@@ -119,7 +120,7 @@ function getCurrentMonthRange() {
 }
 
 // Componente para el gráfico circular de ventas
-const SalesChart = ({ sales }) => {
+const SalesChart = ({ sales, onShowHistory }) => {
   if (!sales || sales.length === 0) {
     return (
       <div className="chart-card no-data-chart">
@@ -131,7 +132,7 @@ const SalesChart = ({ sales }) => {
           <p>No hay datos de ventas para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
@@ -141,11 +142,17 @@ const SalesChart = ({ sales }) => {
   const inProcessSales = sales.filter(s => s.status.toLowerCase().replace('_', ' ') === 'en proceso').length;
   const completedSales = sales.filter(s => s.status.toLowerCase() === 'entregado').length;
 
+  const chartDataForHistory = {
+    pendientes: pendingSales,
+    en_proceso: inProcessSales,
+    entregadas: completedSales,
+  };
+
   const data = {
     labels: ['Pendientes', 'En Proceso', 'Entregadas'],
     datasets: [
       {
-        label: 'Ventas',
+        label: 'Cantidad de Ventas',
         data: [pendingSales, inProcessSales, completedSales],
         backgroundColor: [
           'rgba(245, 158, 11, 0.8)', // Amarillo (Pendiente)
@@ -183,7 +190,12 @@ const SalesChart = ({ sales }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historico</button>
+        <button 
+          className="btn btn-secondary btn-sm" 
+          onClick={() => onShowHistory(chartDataForHistory, 'Ventas por Estado')}
+        >
+          Historico
+        </button>
       </div>
     </div>
   );
@@ -233,7 +245,7 @@ const SalesHistoryChart = ({ sales }) => {
 };
 
 // Componente para el gráfico circular de trabajadores
-const WorkerChart = ({ workers }) => {
+const WorkerChart = ({ workers, onShowHistory }) => {
   if (!workers || workers.length === 0) {
     return (
       <div className="chart-card no-data-chart">
@@ -245,7 +257,7 @@ const WorkerChart = ({ workers }) => {
           <p>No hay datos de trabajadores para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
@@ -254,11 +266,17 @@ const WorkerChart = ({ workers }) => {
   const activeWorkers = workers.filter(w => w.status === 'active').length;
   const inactiveWorkers = workers.length - activeWorkers;
 
+  const chartDataForHistory = {
+    activos: activeWorkers,
+    inactivos: inactiveWorkers,
+    total: workers.length,
+  };
+
   const data = {
     labels: ['Activos', 'Inactivos'],
     datasets: [
       {
-        label: 'Trabajadores',
+        label: 'Cantidad de Trabajadores',
         data: [activeWorkers, inactiveWorkers],
         backgroundColor: [
           'rgba(34, 197, 94, 0.8)',  // Verde (Activos)
@@ -294,7 +312,12 @@ const WorkerChart = ({ workers }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historico</button>
+        <button 
+          className="btn btn-secondary btn-sm" 
+          onClick={() => onShowHistory(chartDataForHistory, 'Trabajadores por Estado')}
+        >
+          Historico
+        </button>
       </div>
     </div>
   );
@@ -337,14 +360,14 @@ const WorkerHistoryChart = ({ workers }) => {
 };
 
 // --- NUEVO GRÁFICO DE PRODUCTOS MÁS VENDIDOS ---
-const BestSellingProductsChart = ({ sales }) => {
+const BestSellingProductsChart = ({ sales, onShowHistory }) => {
   if (!sales || sales.length === 0) {
     // No mostramos nada si no hay ventas, el otro gráfico ya muestra el mensaje.
     return null;
   }
 
   const productQuantities = sales.reduce((acc, sale) => {
-    sale.products.forEach(product => {
+    (sale.products || []).forEach(product => {
       if (acc[product.productId]) {
         acc[product.productId].quantity += product.quantity;
       } else {
@@ -372,11 +395,18 @@ const BestSellingProductsChart = ({ sales }) => {
           <p>No hay datos de productos vendidos para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
   }
+
+  const chartDataForHistory = sortedProducts.reduce((acc, p) => {
+    // Usar una clave segura para el objeto
+    const key = p.name.replace(/\s+/g, '_').toLowerCase();
+    acc[key] = p.quantity;
+    return acc;
+  }, {});
 
   const data = {
     labels: sortedProducts.map(p => p.name),
@@ -431,7 +461,12 @@ const BestSellingProductsChart = ({ sales }) => {
       </div>
       <Bar data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historico</button>
+        <button 
+          className="btn btn-secondary btn-sm" 
+          onClick={() => onShowHistory(chartDataForHistory, 'Productos Más Vendidos')}
+        >
+          Historico
+        </button>
       </div>
     </div>
   );
@@ -450,7 +485,7 @@ const WorkerHoursTable = ({ workerHoursData }) => {
           <p>No hay registros de asistencia para este mes.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
@@ -513,7 +548,7 @@ const WorkerHoursTable = ({ workerHoursData }) => {
 };
 
 // --- NUEVA LISTA DE CANDIDATOS A BONO ---
-const BonusCandidates = ({ workerHoursData }) => {
+const BonusCandidates = ({ workerHoursData, onShowHistory }) => {
   if (!workerHoursData || workerHoursData.length === 0) {
     return null;
   }
@@ -531,11 +566,17 @@ const BonusCandidates = ({ workerHoursData }) => {
         </div>
         <p className="no-candidates">Nadie ha superado las 48 horas este mes.</p>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
   }
+
+  const chartDataForHistory = candidates.reduce((acc, c) => {
+    const key = c.name.replace(/\s+/g, '_').toLowerCase();
+    acc[key] = `${c.overtimeHours.toFixed(1)} horas extra`;
+    return acc;
+  }, {});
 
   return (
     <div className="bonus-card">
@@ -551,14 +592,19 @@ const BonusCandidates = ({ workerHoursData }) => {
         ))}
       </ul>
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historico</button>
+        <button 
+          className="btn btn-secondary btn-sm" 
+          onClick={() => onShowHistory(chartDataForHistory, 'Candidatos a Bono')}
+        >
+          Historico
+        </button>
       </div>
     </div>
   );
 };
 
 // --- NUEVO GRÁFICO DE ALERTAS DE STOCK ---
-const LowStockChart = ({ materials }) => {
+const LowStockChart = ({ materials, onShowHistory }) => {
   if (!materials || materials.length === 0) {
     return (
       <div className="chart-card no-data-chart">
@@ -570,7 +616,7 @@ const LowStockChart = ({ materials }) => {
           <p>No hay datos de inventario para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
@@ -591,11 +637,17 @@ const LowStockChart = ({ materials }) => {
           <p>✅ No hay materiales con stock bajo actualmente.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
   }
+
+  const chartDataForHistory = lowStockItems.reduce((acc, item) => {
+    const key = item.name.replace(/\s+/g, '_').toLowerCase();
+    acc[key] = `Stock actual: ${item.stock} ${item.unit}`;
+    return acc;
+  }, {});
 
   const data = {
     labels: lowStockItems.map(p => `${p.name} (${p.stock} ${p.unit})`),
@@ -637,14 +689,19 @@ const LowStockChart = ({ materials }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historico</button>
+        <button 
+          className="btn btn-secondary btn-sm" 
+          onClick={() => onShowHistory(chartDataForHistory, 'Alertas de Stock Bajo')}
+        >
+          Historico
+        </button>
       </div>
     </div>
   );
 };
 
 // --- NUEVO GRÁFICO DE CATEGORÍAS DE MATERIALES ---
-const MaterialCategoryChart = ({ materials }) => {
+const MaterialCategoryChart = ({ materials, onShowHistory }) => {
   if (!materials || materials.length === 0) {
     return (
       <div className="chart-card no-data-chart">
@@ -656,7 +713,7 @@ const MaterialCategoryChart = ({ materials }) => {
           <p>No hay datos de inventario para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historico</button>
+          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
         </div>
       </div>
     );
@@ -673,6 +730,12 @@ const MaterialCategoryChart = ({ materials }) => {
 
   const labels = sortedCategories.map(([category]) => category);
   const dataPoints = sortedCategories.map(([, count]) => count);
+
+  const chartDataForHistory = sortedCategories.reduce((acc, [category, count]) => {
+    const key = category.replace(/\s+/g, '_').toLowerCase();
+    acc[key] = `${count} tipos de material`;
+    return acc;
+  }, {});
 
   const data = {
     labels: labels,
@@ -717,7 +780,12 @@ const MaterialCategoryChart = ({ materials }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historico</button>
+        <button 
+          className="btn btn-secondary btn-sm" 
+          onClick={() => onShowHistory(chartDataForHistory, 'Materiales por Categoría')}
+        >
+          Historico
+        </button>
       </div>
     </div>
   );
@@ -916,6 +984,12 @@ function ReportsPage() {
   const [workerHoursData, setWorkerHoursData] = useState([]);
   const [rawMaterials, setRawMaterials] = useState([]); // Estado para materias primas
 
+  // Estados para el modal de análisis de historial
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [historyAnalysis, setHistoryAnalysis] = useState('');
+  const [historyTitle, setHistoryTitle] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -1033,6 +1107,46 @@ function ReportsPage() {
     document.title = "INDUSTRIA PROCESADORA DEL CALZADO S.A.C.";
   }, []);
 
+  const handleShowHistory = async (chartData, chartTitle) => {
+    setIsHistoryModalOpen(true);
+    setIsAiLoading(true);
+    setHistoryTitle(chartTitle);
+    setHistoryAnalysis(''); // Limpiar análisis anterior
+
+    const prompt = `
+      Eres un asistente de análisis de datos para una fábrica de calzado.
+      Tu tarea es describir de forma concisa y clara los siguientes datos del reporte de "${chartTitle}".
+      No uses lenguaje técnico de JSON, habla como si le explicaras a un gerente.
+      
+      Datos a analizar:
+      ${JSON.stringify(chartData, null, 2)}
+    `;
+
+    try {
+      // Aquí se haría la llamada al backend que tienes en la carpeta /Modelo
+      // Por ahora, simularemos una respuesta para no depender del backend.
+      // const response = await fetch('http://localhost:3030/qa', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ query: prompt, topK: 1 }),
+      // });
+      // const data = await response.json();
+      // setHistoryAnalysis(data.answer);
+
+      // --- SIMULACIÓN DE RESPUESTA ---
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simular latencia de red
+      const simulatedAnswer = `Análisis para "${chartTitle}":\n\nBasado en los datos, se observa que las cantidades son las siguientes:\n\n${Object.entries(chartData)
+        .map(([key, value]) => `- ${key.replace(/_/g, ' ')}: ${value}`)
+        .join('\n')}`;
+      setHistoryAnalysis(simulatedAnswer);
+    } catch (error) {
+      console.error("Error al generar análisis:", error);
+      setHistoryAnalysis(null); // Indicar que hubo un error
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="loading-overlay"><div className="spinner"></div><p>Cargando reportes...</p></div>;
   }
@@ -1041,14 +1155,21 @@ function ReportsPage() {
     <div className="reports-container">
       <h1>📈 Reportes y Estadísticas</h1>
       <div className="charts-grid">
-        <SalesChart sales={sales} />
-        <WorkerChart workers={workers} />
-        <LowStockChart materials={rawMaterials} />
-        <MaterialCategoryChart materials={rawMaterials} />
-        <BestSellingProductsChart sales={sales} />
+        <SalesChart sales={sales} onShowHistory={handleShowHistory} />
+        <WorkerChart workers={workers} onShowHistory={handleShowHistory} />
+        <LowStockChart materials={rawMaterials} onShowHistory={handleShowHistory} />
+        <MaterialCategoryChart materials={rawMaterials} onShowHistory={handleShowHistory} />
+        <BestSellingProductsChart sales={sales} onShowHistory={handleShowHistory} />
         <WorkerHoursTable workerHoursData={workerHoursData} />
-        <BonusCandidates workerHoursData={workerHoursData} />
+        <BonusCandidates workerHoursData={workerHoursData} onShowHistory={handleShowHistory} />
       </div>
+      <HistoryAnalysisModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        title={historyTitle}
+        analysis={historyAnalysis}
+        isLoading={isAiLoading}
+      />
     </div>
   );
 }
