@@ -131,7 +131,7 @@ const SalesChart = ({ sales }) => {
           <p>No hay datos de ventas para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -183,7 +183,7 @@ const SalesChart = ({ sales }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -245,7 +245,7 @@ const WorkerChart = ({ workers }) => {
           <p>No hay datos de trabajadores para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -294,7 +294,7 @@ const WorkerChart = ({ workers }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -330,7 +330,7 @@ const WorkerHistoryChart = ({ workers }) => {
       <h3><FaChartBar /> Ventas por Estado (Mes)</h3>
       <Line data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -372,7 +372,7 @@ const BestSellingProductsChart = ({ sales }) => {
           <p>No hay datos de productos vendidos para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -431,7 +431,7 @@ const BestSellingProductsChart = ({ sales }) => {
       </div>
       <Bar data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -450,7 +450,7 @@ const WorkerHoursTable = ({ workerHoursData }) => {
           <p>No hay registros de asistencia para este mes.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -531,7 +531,7 @@ const BonusCandidates = ({ workerHoursData }) => {
         </div>
         <p className="no-candidates">Nadie ha superado las 48 horas este mes.</p>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -551,7 +551,7 @@ const BonusCandidates = ({ workerHoursData }) => {
         ))}
       </ul>
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -570,7 +570,7 @@ const LowStockChart = ({ materials }) => {
           <p>No hay datos de inventario para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -591,7 +591,7 @@ const LowStockChart = ({ materials }) => {
           <p>✅ No hay materiales con stock bajo actualmente.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -637,7 +637,7 @@ const LowStockChart = ({ materials }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -656,7 +656,7 @@ const MaterialCategoryChart = ({ materials }) => {
           <p>No hay datos de inventario para mostrar.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm">Historial</button>
+          <button className="btn btn-secondary btn-sm">Historico</button>
         </div>
       </div>
     );
@@ -717,7 +717,7 @@ const MaterialCategoryChart = ({ materials }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -747,7 +747,7 @@ const LowStockHistoryChart = ({ materials }) => {
       </div>
       <Bar data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -792,7 +792,7 @@ const MaterialCategoryHistoryChart = ({ materials }) => {
       </div>
       <Line data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -835,7 +835,7 @@ const SalesMonthlyPieChart = ({ sales }) => {
       </div>
       <Pie data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
@@ -902,7 +902,7 @@ const MaterialCategoryMonthlyBarChart = ({ materials }) => {
       </div>
       <Bar data={data} options={options} />
       <div className="chart-footer">
-        <button className="btn btn-secondary btn-sm">Historial</button>
+        <button className="btn btn-secondary btn-sm">Historico</button>
       </div>
     </div>
   );
