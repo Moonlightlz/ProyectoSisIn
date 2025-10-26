@@ -3,7 +3,7 @@ import { saleService } from '../services/saleService';
 import { workerService, attendanceService } from '../services/workerService';
 import { rawMaterialService } from './rawMaterialService'; // Importar servicio de materia prima
 import WorkerPayrollService from '../services/workerPayrollService';
-import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar, FaWarehouse } from 'react-icons/fa';
+import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar, FaWarehouse, FaLayerGroup } from 'react-icons/fa';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
 import './ReportsPage.css';
@@ -478,6 +478,78 @@ const LowStockChart = ({ materials }) => {
     </div>
   );
 };
+
+// --- NUEVO GRÁFICO DE CATEGORÍAS DE MATERIALES ---
+const MaterialCategoryChart = ({ materials }) => {
+  if (!materials || materials.length === 0) {
+    return (
+      <div className="chart-card no-data-chart">
+        <h3><FaLayerGroup /> Materiales por Categoría</h3>
+        <div className="no-data-message">
+          <FaExclamationCircle size={30} />
+          <p>No hay datos de inventario para mostrar.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const categoryCounts = materials.reduce((acc, material) => {
+    const category = material.category || 'Sin Categoría';
+    acc[category] = (acc[category] || 0) + 1;
+    return acc;
+  }, {});
+
+  const sortedCategories = Object.entries(categoryCounts)
+    .sort(([, a], [, b]) => b - a);
+
+  const labels = sortedCategories.map(([category]) => category);
+  const dataPoints = sortedCategories.map(([, count]) => count);
+
+  const data = {
+    labels: labels,
+    datasets: [
+      {
+        label: 'Nº de Tipos de Material',
+        data: dataPoints,
+        backgroundColor: [
+          'rgba(30, 64, 175, 0.8)',
+          'rgba(37, 99, 235, 0.8)',
+          'rgba(59, 130, 246, 0.8)',
+          'rgba(96, 165, 250, 0.8)',
+          'rgba(147, 197, 253, 0.8)',
+          'rgba(191, 219, 254, 0.8)',
+          'rgba(219, 234, 254, 0.8)',
+          'rgba(100, 116, 139, 0.8)',
+        ],
+        borderColor: '#ffffff',
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    aspectRatio: 1.2,
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: 'Distribución de Materiales por Categoría',
+        font: { size: 16, family: "'Poppins', sans-serif" },
+        color: '#334155'
+      },
+    },
+  };
+
+  return (
+    <div className="chart-card">
+      <h3>
+        <FaLayerGroup /> Materiales por Categoría
+      </h3>
+      <Pie data={data} options={options} />
+    </div>
+  );
+};
 // --- FIN DE NUEVOS COMPONENTES ---
 
 function ReportsPage() {
@@ -611,6 +683,7 @@ function ReportsPage() {
         <SalesChart sales={sales} />
         <WorkerChart workers={workers} />
         <LowStockChart materials={rawMaterials} />
+        <MaterialCategoryChart materials={rawMaterials} />
         <BestSellingProductsChart sales={sales} />
         <WorkerHoursTable workerHoursData={workerHoursData} />
         <BonusCandidates workerHoursData={workerHoursData} />
