@@ -324,12 +324,10 @@ const BestSellingProductsChart = ({ sales }) => {
     sale.products.forEach(product => {
       if (acc[product.productId]) {
         acc[product.productId].quantity += product.quantity;
-        acc[product.productId].revenue += (product.subtotal || (product.dozens * product.pricePerDozen || 0));
       } else {
         acc[product.productId] = {
           name: product.productName,
           quantity: product.quantity,
-          revenue: (product.subtotal || (product.dozens * product.pricePerDozen || 0)),
         };
       }
     });
@@ -338,7 +336,7 @@ const BestSellingProductsChart = ({ sales }) => {
 
   const sortedProducts = Object.values(productQuantities)
     .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 10); // Mostrar los 10 productos más vendidos para más detalle
+    .slice(0, 5); // Mostrar los 5 productos más vendidos
 
   if (sortedProducts.length === 0) {
     return (
@@ -356,22 +354,24 @@ const BestSellingProductsChart = ({ sales }) => {
     labels: sortedProducts.map(p => p.name),
     datasets: [
       {
-        label: 'Pares Vendidos',
+        label: 'Cantidad Vendida (Pares)',
         data: sortedProducts.map(p => p.quantity),
-        backgroundColor: 'rgba(59, 130, 246, 0.7)',
-        borderColor: 'rgba(59, 130, 246, 1)',
+        backgroundColor: [
+          'rgba(30, 41, 59, 0.8)',
+          'rgba(51, 65, 85, 0.8)',
+          'rgba(71, 85, 105, 0.8)',
+          'rgba(100, 116, 139, 0.8)',
+          'rgba(148, 163, 184, 0.8)'
+        ],
+        borderColor: [
+          'rgba(30, 41, 59, 1)',
+          'rgba(51, 65, 85, 1)',
+          'rgba(71, 85, 105, 1)',
+          'rgba(100, 116, 139, 1)',
+          'rgba(148, 163, 184, 1)'
+        ],
         borderWidth: 1,
         borderRadius: 4,
-        yAxisID: 'y',
-      },
-      {
-        label: 'Ingresos (S/)',
-        data: sortedProducts.map(p => p.revenue),
-        backgroundColor: 'rgba(16, 185, 129, 0.5)',
-        borderColor: 'rgba(16, 185, 129, 1)',
-        borderWidth: 1,
-        borderRadius: 4,
-        yAxisID: 'y1',
       },
     ],
   };
@@ -379,32 +379,20 @@ const BestSellingProductsChart = ({ sales }) => {
   const options = {
     indexAxis: 'x',
     responsive: true,
-    aspectRatio: 1.6,
+    aspectRatio: 1.2,
     plugins: {
-      legend: { display: true },
-      title: { 
-        display: true, 
-        text: 'Top 10 Productos: Pares Vendidos e Ingresos',
+      legend: { display: false },
+      title: {
+        display: true,
+        text: 'Top 5 Productos Más Vendidos (en Pares)',
         font: { size: 16, family: "'Poppins', sans-serif" },
         color: '#334155'
       },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => {
-            const label = ctx.dataset.label || '';
-            const val = ctx.raw;
-            if (label.includes('Ingresos')) {
-              return `${label}: S/ ${Number(val).toFixed(2)}`;
-            }
-            return `${label}: ${val}`;
-          }
-        }
-      }
     },
     scales: {
-      y: { position: 'left', title: { display: true, text: 'Pares' } },
-      y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Soles' } },
-      x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }
+      x: {
+        ticks: { display: false }
+      }
     }
   };
 
@@ -960,10 +948,10 @@ function ReportsPage() {
     <div className="reports-container">
       <h1>📈 Reportes y Estadísticas</h1>
       <div className="charts-grid">
-        <SalesMonthlyPieChart sales={sales} />
-        <WorkerHistoryChart workers={workers} />
-  <LowStockHistoryChart materials={rawMaterials} />
-  <MaterialCategoryMonthlyBarChart materials={rawMaterials} />
+        <SalesChart sales={sales} />
+        <WorkerChart workers={workers} />
+        <LowStockChart materials={rawMaterials} />
+        <MaterialCategoryChart materials={rawMaterials} />
         <BestSellingProductsChart sales={sales} />
         <WorkerHoursTable workerHoursData={workerHoursData} />
         <BonusCandidates workerHoursData={workerHoursData} />
