@@ -672,6 +672,11 @@ function ReportsPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    // Establecer el título de la página
+    document.title = "INDUSTRIA PROCESADORA DEL CALZADO S.A.C.";
+  }, []);
+
   if (loading) {
     return <div className="loading-overlay"><div className="spinner"></div><p>Cargando reportes...</p></div>;
   }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -23,6 +23,10 @@ rawMaterialService.enableSeederInWindow();
 // Componente interno que usa el hook useAuth
 function AppContent() {
   const { currentUser, logout } = useAuth();
+
+  useEffect(() => {
+    document.title = "INDUSTRIA PROCESADORA DEL CALZADO S.A.C.";
+  }, []);
 
   return (
     <BrowserRouter>
