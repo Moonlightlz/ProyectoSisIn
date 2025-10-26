@@ -2,7 +2,7 @@ import React from 'react';
 import { FaTimes, FaRobot } from 'react-icons/fa';
 import './HistoryAnalysisModal.css';
 
-const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, isLoading }) => {
+const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, data, isLoading }) => {
   if (!isOpen) return null;
 
   return (
@@ -24,6 +24,26 @@ const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, isLoading }) =
             </div>
           ) : (
             <div className="analysis-content">
+              {data && (
+                <div className="history-data-table-container">
+                  <table className="history-data-table">
+                    <thead>
+                      <tr>
+                        <th>Concepto</th>
+                        <th>Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(data).map(([key, value]) => (
+                        <tr key={key}>
+                          <td>{key.replace(/_/g, ' ')}</td>
+                          <td>{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               {analysis ? (
                 <div className="ai-response-box">
                   <p>{analysis}</p>

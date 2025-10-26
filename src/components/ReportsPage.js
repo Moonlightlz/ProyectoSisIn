@@ -988,6 +988,7 @@ function ReportsPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [historyAnalysis, setHistoryAnalysis] = useState('');
   const [historyTitle, setHistoryTitle] = useState('');
+  const [historyData, setHistoryData] = useState(null); // <-- NUEVO: para pasar datos a la tabla
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
@@ -1111,14 +1112,15 @@ function ReportsPage() {
     setIsHistoryModalOpen(true);
     setIsAiLoading(true);
     setHistoryTitle(chartTitle);
+    setHistoryData(chartData); // <-- NUEVO: Guardar los datos para la tabla
     setHistoryAnalysis(''); // Limpiar análisis anterior
 
     const prompt = `
       Eres un asistente de análisis de datos para una fábrica de calzado.
-      Tu tarea es describir de forma concisa y clara los siguientes datos del reporte de "${chartTitle}".
-      No uses lenguaje técnico de JSON, habla como si le explicaras a un gerente.
+      A continuación se te presentan datos del reporte "${chartTitle}". Estos datos ya se muestran en una tabla al usuario.
+      Tu tarea es generar una breve descripción o conclusión basada en estos números, sin volver a listarlos. Por ejemplo, puedes indicar cuál es la categoría más grande, la más pequeña, o si un valor es notablemente alto o bajo. Habla como si le explicaras a un gerente.
       
-      Datos a analizar:
+      Datos para tu análisis (no los repitas en la respuesta):
       ${JSON.stringify(chartData, null, 2)}
     `;
 
@@ -1135,9 +1137,23 @@ function ReportsPage() {
 
       // --- SIMULACIÓN DE RESPUESTA ---
       await new Promise(resolve => setTimeout(resolve, 1500)); // Simular latencia de red
-      const simulatedAnswer = `Análisis para "${chartTitle}":\n\nBasado en los datos, se observa que las cantidades son las siguientes:\n\n${Object.entries(chartData)
-        .map(([key, value]) => `- ${key.replace(/_/g, ' ')}: ${value}`)
-        .join('\n')}`;
+      
+      // Encontrar la clave y el valor más alto para una respuesta más inteligente
+      let maxKey = '';
+      let maxValue = -Infinity;
+      Object.entries(chartData).forEach(([key, value]) => {
+          // Asegurarse de que el valor es numérico para la comparación
+          const numericValue = parseFloat(String(value).replace(/[^\d.-]/g, ''));
+          if (!isNaN(numericValue) && numericValue > maxValue) {
+              maxValue = numericValue;
+              maxKey = key.replace(/_/g, ' ');
+          }
+      });
+
+      let simulatedAnswer = `Análisis del reporte "${chartTitle}":\n\nEl enfoque principal se centra en '${maxKey}', que representa la categoría más significativa en este conjunto de datos. Se recomienda revisar este indicador para la toma de decisiones.`;
+      if (!maxKey) { // Fallback si no se encuentran datos numéricos
+        simulatedAnswer = `Análisis del reporte "${chartTitle}":\n\nSe han procesado los datos. Es importante revisar las cifras presentadas en la tabla para entender la distribución actual y tomar decisiones informadas.`;
+      }
       setHistoryAnalysis(simulatedAnswer);
     } catch (error) {
       console.error("Error al generar análisis:", error);
@@ -1168,6 +1184,7 @@ function ReportsPage() {
         onClose={() => setIsHistoryModalOpen(false)}
         title={historyTitle}
         analysis={historyAnalysis}
+        data={historyData} // <-- NUEVO: Pasar los datos al modal
         isLoading={isAiLoading}
       />
     </div>

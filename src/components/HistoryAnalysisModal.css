@@ -92,6 +92,38 @@
   margin: 0;
 }
 
+.history-data-table-container {
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+.history-data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.history-data-table th,
+.history-data-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.history-data-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.history-data-table td:first-child {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
 .ai-response-box {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
