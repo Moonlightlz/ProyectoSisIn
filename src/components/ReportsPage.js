@@ -4,8 +4,8 @@ import { workerService, attendanceService } from '../services/workerService';
 import { rawMaterialService } from './rawMaterialService'; // Importar servicio de materia prima
 import WorkerPayrollService from '../services/workerPayrollService';
 import { FaExclamationCircle, FaChartPie, FaChartBar, FaStar, FaWarehouse, FaLayerGroup } from 'react-icons/fa';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale } from 'chart.js';
-import { Pie, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Filler } from 'chart.js';
+import { Pie, Bar, Line } from 'react-chartjs-2';
 import './ReportsPage.css';
 
 // Utilidad: calcula horas trabajadas por día y totales por trabajador (mes actual)
@@ -89,9 +89,34 @@ function computeWorkerHoursData(attendanceData) {
 }
 
 // Registrar los componentes de Chart.js que vamos a utilizar
-ChartJS.register(ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale);
+ChartJS.register(ArcElement, Tooltip, Legend, Title, BarElement, CategoryScale, LinearScale, LineElement, PointElement, Filler);
 
 // --- NUEVOS COMPONENTES DE GRÁFICOS ---
+
+// Utilidad: días del mes actual (labels y límites por día)
+function getDaysInCurrentMonth() {
+  const days = [];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const start = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= lastDay; d++) {
+    const dayStart = new Date(year, month, d, 0, 0, 0, 0);
+    const dayEnd = new Date(year, month, d, 23, 59, 59, 999);
+    const label = String(d).padStart(2, '0');
+    days.push({ label, start: dayStart, end: dayEnd });
+  }
+  return days;
+}
+
+// Utilidad: rango de fechas del mes actual
+function getCurrentMonthRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { start, end };
+}
 
 // Componente para el gráfico circular de ventas
 const SalesChart = ({ sales }) => {
@@ -154,6 +179,49 @@ const SalesChart = ({ sales }) => {
   );
 };
 
+// Histórico mensual (mes actual, por día) de Ventas por Estado
+const SalesHistoryChart = ({ sales }) => {
+  if (!sales || sales.length === 0) return null;
+  const days = getDaysInCurrentMonth();
+  const toDate = (v) => (v instanceof Date ? v : v?.toDate ? v.toDate() : v ? new Date(v) : null);
+  const countsByStatus = {
+    pendiente: days.map(({ start, end }) => sales.filter(s => {
+      const d = toDate(s.date) || toDate(s.createdAt) || null;
+      if (!d) return false;
+      return d >= start && d <= end && (s.status || '').toLowerCase() === 'pendiente';
+    }).length),
+    enproceso: days.map(({ start, end }) => sales.filter(s => {
+      const d = toDate(s.date) || toDate(s.createdAt) || null;
+      if (!d) return false;
+      return d >= start && d <= end && (s.status || '').toLowerCase().replace('_', ' ') === 'en proceso';
+    }).length),
+    entregado: days.map(({ start, end }) => sales.filter(s => {
+      const d = toDate(s.date) || toDate(s.createdAt) || null;
+      if (!d) return false;
+      return d >= start && d <= end && (s.status || '').toLowerCase() === 'entregado';
+    }).length),
+  };
+  const data = {
+    labels: days.map(m => m.label),
+    datasets: [
+      { label: 'Pendientes', data: countsByStatus.pendiente, borderColor: 'rgba(245, 158, 11, 1)', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.3, pointRadius: 2 },
+      { label: 'En Proceso', data: countsByStatus.enproceso, borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.3, pointRadius: 2 },
+      { label: 'Entregadas', data: countsByStatus.entregado, borderColor: 'rgba(16, 185, 129, 1)', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, tension: 0.3, pointRadius: 2 },
+    ],
+  };
+  const options = {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top' }, title: { display: true, text: 'Mes Actual - Ventas por Estado (por día)' } },
+  };
+  return (
+    <div className="chart-card">
+      <h3><FaChartBar /> Ventas por Estado (Mes)</h3>
+      <Line data={data} options={options} />
+    </div>
+  );
+};
+
 // Componente para el gráfico circular de trabajadores
 const WorkerChart = ({ workers }) => {
   if (!workers || workers.length === 0) {
@@ -212,6 +280,39 @@ const WorkerChart = ({ workers }) => {
   );
 };
 
+// Histórico mensual (mes actual, por día) de Trabajadores por Estado (aproximado con hireDate/deletedAt)
+const WorkerHistoryChart = ({ workers }) => {
+  if (!workers || workers.length === 0) return null;
+  const days = getDaysInCurrentMonth();
+  const toDate = (v) => (v instanceof Date ? v : v?.toDate ? v.toDate() : v ? new Date(v) : null);
+  const counts = days.map(({ end }) => {
+    const active = workers.filter(w => {
+      const hire = toDate(w.hireDate) || toDate(w.createdAt) || new Date(0);
+      const deletedAt = toDate(w.deletedAt);
+      const wasHired = hire <= end;
+      const notDeletedAtThatTime = !deletedAt || deletedAt > end;
+      return wasHired && notDeletedAtThatTime && w.status === 'active';
+    }).length;
+    const totalAtTime = workers.filter(w => (toDate(w.hireDate) || toDate(w.createdAt) || new Date(0)) <= end).length;
+    const inactive = Math.max(0, totalAtTime - active);
+    return { active, inactive };
+  });
+  const data = {
+    labels: days.map(m => m.label),
+    datasets: [
+      { label: 'Activos', data: counts.map(c => c.active), borderColor: 'rgba(34, 197, 94, 1)', backgroundColor: 'rgba(34, 197, 94, 0.2)', fill: true, tension: 0.3, pointRadius: 2 },
+      { label: 'Inactivos', data: counts.map(c => c.inactive), borderColor: 'rgba(100, 116, 139, 1)', backgroundColor: 'rgba(100, 116, 139, 0.2)', fill: true, tension: 0.3, pointRadius: 2 },
+    ],
+  };
+  const options = { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Mes Actual - Trabajadores por Estado (por día)' } } };
+  return (
+    <div className="chart-card">
+      <h3><FaChartBar /> Trabajadores por Estado (Mes)</h3>
+      <Line data={data} options={options} />
+    </div>
+  );
+};
+
 // --- NUEVO GRÁFICO DE PRODUCTOS MÁS VENDIDOS ---
 const BestSellingProductsChart = ({ sales }) => {
   if (!sales || sales.length === 0) {
@@ -223,10 +324,12 @@ const BestSellingProductsChart = ({ sales }) => {
     sale.products.forEach(product => {
       if (acc[product.productId]) {
         acc[product.productId].quantity += product.quantity;
+        acc[product.productId].revenue += (product.subtotal || (product.dozens * product.pricePerDozen || 0));
       } else {
         acc[product.productId] = {
           name: product.productName,
           quantity: product.quantity,
+          revenue: (product.subtotal || (product.dozens * product.pricePerDozen || 0)),
         };
       }
     });
@@ -235,7 +338,7 @@ const BestSellingProductsChart = ({ sales }) => {
 
   const sortedProducts = Object.values(productQuantities)
     .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 5); // Mostrar los 5 productos más vendidos
+    .slice(0, 10); // Mostrar los 10 productos más vendidos para más detalle
 
   if (sortedProducts.length === 0) {
     return (
@@ -253,47 +356,55 @@ const BestSellingProductsChart = ({ sales }) => {
     labels: sortedProducts.map(p => p.name),
     datasets: [
       {
-        label: 'Cantidad Vendida (Pares)',
+        label: 'Pares Vendidos',
         data: sortedProducts.map(p => p.quantity),
-        backgroundColor: [
-          'rgba(30, 41, 59, 0.8)',
-          'rgba(51, 65, 85, 0.8)',
-          'rgba(71, 85, 105, 0.8)',
-          'rgba(100, 116, 139, 0.8)',
-          'rgba(148, 163, 184, 0.8)',
-        ],
-        borderColor: [
-          'rgba(30, 41, 59, 1)',
-          'rgba(51, 65, 85, 1)',
-          'rgba(71, 85, 105, 1)',
-          'rgba(100, 116, 139, 1)',
-          'rgba(148, 163, 184, 1)',
-        ],
+        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+        borderColor: 'rgba(59, 130, 246, 1)',
         borderWidth: 1,
         borderRadius: 4,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Ingresos (S/)',
+        data: sortedProducts.map(p => p.revenue),
+        backgroundColor: 'rgba(16, 185, 129, 0.5)',
+        borderColor: 'rgba(16, 185, 129, 1)',
+        borderWidth: 1,
+        borderRadius: 4,
+        yAxisID: 'y1',
       },
     ],
   };
 
   const options = {
-    indexAxis: 'x', // <-- 'x' para barras verticales
+    indexAxis: 'x',
     responsive: true,
-    aspectRatio: 1.2, // <-- Ajusta la proporción para que sea más grande
+    aspectRatio: 1.6,
     plugins: {
-      legend: { display: false },
+      legend: { display: true },
       title: { 
         display: true, 
-        text: 'Top 5 Productos Más Vendidos (en Pares)',
+        text: 'Top 10 Productos: Pares Vendidos e Ingresos',
         font: { size: 16, family: "'Poppins', sans-serif" },
         color: '#334155'
       },
-    },
-    scales: {
-      x: {
-        ticks: {
-          display: false // <-- Esto oculta las etiquetas del eje X
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const label = ctx.dataset.label || '';
+            const val = ctx.raw;
+            if (label.includes('Ingresos')) {
+              return `${label}: S/ ${Number(val).toFixed(2)}`;
+            }
+            return `${label}: ${val}`;
+          }
         }
       }
+    },
+    scales: {
+      y: { position: 'left', title: { display: true, text: 'Pares' } },
+      y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Soles' } },
+      x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }
     }
   };
 
@@ -550,7 +661,171 @@ const MaterialCategoryChart = ({ materials }) => {
     </div>
   );
 };
+
+// Histórico mensual (mes actual, por día) de Alertas de Stock Bajo (aprox.)
+const LowStockHistoryChart = ({ materials }) => {
+  if (!materials || materials.length === 0) return null;
+  const days = getDaysInCurrentMonth();
+  const toDate = (v) => (v instanceof Date ? v : v?.toDate ? v.toDate() : v ? new Date(v) : null);
+  const counts = days.map(({ end }) => materials.filter(m => {
+    const created = toDate(m.createdAt) || new Date(0);
+    const threshold = typeof m.lowStockThreshold === 'number' ? m.lowStockThreshold : 20;
+    return created <= end && Number(m.stock || 0) <= threshold;
+  }).length);
+  const data = {
+    labels: days.map(m => m.label),
+    datasets: [
+      { label: 'Materiales con Stock Bajo (aprox.)', data: counts, backgroundColor: 'rgba(239, 68, 68, 0.6)' }
+    ]
+  };
+  const options = { responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Mes Actual - Stock Bajo (aprox.) (por día)' } } };
+  return (
+    <div className="chart-card">
+      <h3><FaChartBar /> Stock Bajo (Mes, aprox.)</h3>
+      <Bar data={data} options={options} />
+    </div>
+  );
+};
+
+// Histórico mensual (mes actual, por día) de Materiales por Categoría (creados por día)
+const MaterialCategoryHistoryChart = ({ materials }) => {
+  if (!materials || materials.length === 0) return null;
+  const days = getDaysInCurrentMonth();
+  const toDate = (v) => (v instanceof Date ? v : v?.toDate ? v.toDate() : v ? new Date(v) : null);
+  // reunir categorías
+  const categories = Array.from(new Set(materials.map(m => m.category || 'Sin Categoría')));
+  const topCategories = categories.slice(0, 4); // limitar a 4 para legibilidad
+  const datasets = topCategories.map((cat, idx) => {
+    const colorBase = [
+      'rgba(30, 64, 175, 0.6)',
+      'rgba(37, 99, 235, 0.6)',
+      'rgba(59, 130, 246, 0.6)',
+      'rgba(96, 165, 250, 0.6)'
+    ][idx % 4];
+    return {
+      label: cat,
+      data: days.map(({ start, end }) => materials.filter(m => (m.category || 'Sin Categoría') === cat && (() => { const c = toDate(m.createdAt) || new Date(0); return c >= start && c <= end; })()).length),
+      backgroundColor: colorBase
+    };
+  });
+  // Convert datasets to line style with fills
+  const lineDatasets = datasets.map((ds) => ({
+    ...ds,
+    borderColor: ds.backgroundColor.replace('0.6', '1'),
+    backgroundColor: ds.backgroundColor.replace('0.6', '0.2'),
+    fill: true,
+    tension: 0.3,
+    pointRadius: 2,
+  }));
+  const data = { labels: days.map(m => m.label), datasets: lineDatasets };
+  const options = { responsive: true, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Mes Actual - Materiales por Categoría (por día)' } } };
+  return (
+    <div className="chart-card">
+      <h3><FaChartBar /> Materiales por Categoría (Mes)</h3>
+      <Line data={data} options={options} />
+    </div>
+  );
+};
 // --- FIN DE NUEVOS COMPONENTES ---
+
+// Gráfico pastel: Ventas por Estado (Mes)
+const SalesMonthlyPieChart = ({ sales }) => {
+  if (!sales || sales.length === 0) return null;
+  const { start, end } = getCurrentMonthRange();
+  const toDate = (v) => (v instanceof Date ? v : v?.toDate ? v.toDate() : v ? new Date(v) : null);
+  const inMonth = sales.filter(s => {
+    const d = toDate(s.date) || toDate(s.createdAt) || null;
+    return d && d >= start && d <= end;
+  });
+  const pending = inMonth.filter(s => (s.status || '').toLowerCase() === 'pendiente').length;
+  const inProcess = inMonth.filter(s => (s.status || '').toLowerCase().replace('_', ' ') === 'en proceso').length;
+  const delivered = inMonth.filter(s => (s.status || '').toLowerCase() === 'entregado').length;
+  const total = pending + inProcess + delivered;
+  if (total === 0) return null;
+  const data = {
+    labels: ['Pendientes', 'En Proceso', 'Entregadas'],
+    datasets: [{
+      label: 'Ventas',
+      data: [pending, inProcess, delivered],
+      backgroundColor: [
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(59, 130, 246, 0.8)',
+        'rgba(16, 185, 129, 0.8)'
+      ],
+      borderColor: ['#ffffff', '#ffffff', '#ffffff'],
+      borderWidth: 2,
+    }]
+  };
+  const options = { responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Ventas por Estado (Mes)' } } };
+  return (
+    <div className="chart-card">
+      <h3><FaChartPie /> Ventas por Estado (Mes)</h3>
+      <Pie data={data} options={options} />
+    </div>
+  );
+};
+
+// Gráfico de barras horizontal: Materiales por Categoría (Mes) con "Otros"
+const MaterialCategoryMonthlyBarChart = ({ materials }) => {
+  if (!materials || materials.length === 0) return null;
+  const { start, end } = getCurrentMonthRange();
+  const toDate = (v) => (v instanceof Date ? v : v?.toDate ? v.toDate() : v ? new Date(v) : null);
+  const inMonth = materials.filter(m => {
+    const d = toDate(m.createdAt) || new Date(0);
+    return d >= start && d <= end;
+  });
+  if (inMonth.length === 0) return null;
+  const categoryCounts = inMonth.reduce((acc, m) => {
+    const cat = m.category || 'Sin Categoría';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
+  // Ordenar por cantidad y agregar "Otros" si excede el topN
+  const entries = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+  const topN = 8;
+  const top = entries.slice(0, topN);
+  const rest = entries.slice(topN);
+  const othersSum = rest.reduce((sum, [, c]) => sum + c, 0);
+  const labels = [...top.map(([k]) => k), ...(othersSum > 0 ? ['Otros'] : [])];
+  const dataPoints = [...top.map(([, v]) => v), ...(othersSum > 0 ? [othersSum] : [])];
+  const palette = [
+    'rgba(30, 64, 175, 0.8)',
+    'rgba(37, 99, 235, 0.8)',
+    'rgba(59, 130, 246, 0.8)',
+    'rgba(96, 165, 250, 0.8)',
+    'rgba(147, 197, 253, 0.8)',
+    'rgba(191, 219, 254, 0.8)',
+    'rgba(219, 234, 254, 0.8)',
+    'rgba(100, 116, 139, 0.8)',
+    'rgba(148, 163, 184, 0.8)'
+  ];
+  const data = {
+    labels,
+    datasets: [{
+      label: 'Materiales (creados este mes)',
+      data: dataPoints,
+      backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+      borderColor: '#ffffff',
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  };
+  const options = {
+    responsive: true,
+    indexAxis: 'y',
+    plugins: { legend: { display: false }, title: { display: true, text: 'Materiales por Categoría (Mes)' } },
+    scales: {
+      x: { beginAtZero: true, ticks: { precision: 0 } },
+      y: { ticks: { autoSkip: false } }
+    }
+  };
+  return (
+    <div className="chart-card">
+      <h3><FaChartBar /> Materiales por Categoría (Mes)</h3>
+      <Bar data={data} options={options} />
+    </div>
+  );
+};
 
 function ReportsPage() {
   const [sales, setSales] = useState([]);
@@ -685,10 +960,10 @@ function ReportsPage() {
     <div className="reports-container">
       <h1>📈 Reportes y Estadísticas</h1>
       <div className="charts-grid">
-        <SalesChart sales={sales} />
-        <WorkerChart workers={workers} />
-        <LowStockChart materials={rawMaterials} />
-        <MaterialCategoryChart materials={rawMaterials} />
+        <SalesMonthlyPieChart sales={sales} />
+        <WorkerHistoryChart workers={workers} />
+  <LowStockHistoryChart materials={rawMaterials} />
+  <MaterialCategoryMonthlyBarChart materials={rawMaterials} />
         <BestSellingProductsChart sales={sales} />
         <WorkerHoursTable workerHoursData={workerHoursData} />
         <BonusCandidates workerHoursData={workerHoursData} />
