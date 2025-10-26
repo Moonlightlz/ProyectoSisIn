@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './AssistantWidget.css';
 
-function AssistantWidget() {
+function AssistantWidget({ role = 'user' }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState('');
@@ -18,11 +18,21 @@ function AssistantWidget() {
       setSources([]);
       const resp = await fetch('http://localhost:3030/qa', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-User-Role': role },
         body: JSON.stringify({ query, topK: 4 })
       });
-      if (!resp.ok) throw new Error('Error del servicio /qa');
-      const data = await resp.json();
+      let data;
+      if (!resp.ok) {
+        // Intentar leer mensaje del servidor para mostrar causa real
+        try {
+          const err = await resp.json();
+          throw new Error(err?.message || err?.error || 'Error del servicio /qa');
+        } catch (_) {
+          throw new Error('Error del servicio /qa');
+        }
+      } else {
+        data = await resp.json();
+      }
       setAnswer(data.answer || '');
       setSources(Array.isArray(data.sources) ? data.sources : []);
     } catch (e) {

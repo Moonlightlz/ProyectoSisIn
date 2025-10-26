@@ -1,5 +1,6 @@
 const path = require('path');
-require('dotenv').config();
+// Carga .env siempre desde la carpeta Modelo, sin depender del cwd
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const config = {
   port: parseInt(process.env.PORT || '3030', 10),
@@ -7,6 +8,10 @@ const config = {
   ollamaHost: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434',
   embedModel: process.env.EMBED_MODEL || 'nomic-embed-text',
   llmModel: process.env.LLM_MODEL || 'llama3.1:8b-instruct',
+  allowedCollectionsDefault: (process.env.ALLOWED_COLLECTIONS_DEFAULT || 'ventas,materiales')
+    .split(',').map(s => s.trim()).filter(Boolean),
+  allowedCollectionsAdmin: (process.env.ALLOWED_COLLECTIONS_ADMIN || '*')
+    .split(',').map(s => s.trim()).filter(Boolean),
   serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT
     ? path.resolve(process.env.FIREBASE_SERVICE_ACCOUNT)
     : null,

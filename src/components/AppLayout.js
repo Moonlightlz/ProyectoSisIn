@@ -38,8 +38,8 @@ function AppLayout({ onLogout }) {
       <main className="content-area">
         <Outlet /> {/* Aquí se renderizarán las rutas hijas */}
       </main>
-      {/* Asistente flotante global */}
-      <AssistantWidget />
+  {/* Asistente flotante global */}
+  <AssistantWidget role={userRole || 'user'} />
     </div>
   );
 }

@@ -322,7 +322,7 @@ const WorkerChart = ({ workers, onShowHistory }) => {
     </div>
   );
 };
-
+  
 // Histórico mensual (mes actual, por día) de Trabajadores por Estado (aproximado con hireDate/deletedAt)
 const WorkerHistoryChart = ({ workers }) => {
   if (!workers || workers.length === 0) return null;

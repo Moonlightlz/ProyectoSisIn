@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "ingest": "node src/ingest_firestore.js"
+    "ingest": "node src/ingest_firestore.js",
+    "ingest:repo": "node src/ingest_repo.js",
+    "ingest:all": "npm run ingest && npm run ingest:repo"
   },
   "dependencies": {
     "cors": "^2.8.5",
