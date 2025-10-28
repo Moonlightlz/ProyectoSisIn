@@ -16,10 +16,10 @@ function AssistantWidget({ role = 'user' }) {
       setError('');
       setAnswer('');
       setSources([]);
-      const resp = await fetch('http://localhost:3030/qa', {
+      const resp = await fetch('http://localhost:3030/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Role': role },
-        body: JSON.stringify({ query, topK: 4 })
+        body: JSON.stringify({ query })
       });
       let data;
       if (!resp.ok) {

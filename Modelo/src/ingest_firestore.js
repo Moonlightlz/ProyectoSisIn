@@ -18,23 +18,108 @@ async function initFirestore() {
   return admin.firestore();
 }
 
-function flattenDocData(data) {
+function flattenDocData(data, collectionName) {
   const parts = [];
+  
+  // Agregar contexto de la colección
+  const collectionContext = getCollectionContext(collectionName);
+  if (collectionContext) {
+    parts.push(collectionContext);
+  }
+  
   function walk(obj, prefix = '') {
     for (const [k, v] of Object.entries(obj || {})) {
       const key = prefix ? `${prefix}.${k}` : k;
       if (v == null) continue;
+      
+      // Formatear campos de manera más legible
+      const friendlyKey = getFriendlyFieldName(k, collectionName);
+      
       if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
-        parts.push(`${k}: ${v}`);
+        parts.push(`${friendlyKey}: ${v}`);
       } else if (Array.isArray(v)) {
-        parts.push(`${k}: ${v.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(', ')}`);
+        const arrayStr = v.map((x) => {
+          if (typeof x === 'object' && x !== null) {
+            return JSON.stringify(x);
+          }
+          return String(x);
+        }).join(', ');
+        parts.push(`${friendlyKey}: ${arrayStr}`);
       } else if (typeof v === 'object') {
-        walk(v, key);
+        // Para objetos anidados, expandir con contexto
+        if (k === 'timestamp' || k === 'createdAt' || k === 'updatedAt') {
+          const date = v.toDate ? v.toDate() : new Date(v);
+          parts.push(`${friendlyKey}: ${date.toLocaleDateString('es-ES')}`);
+        } else {
+          walk(v, key);
+        }
       }
     }
   }
   walk(data);
   return parts.join('\n');
+}
+
+function getCollectionContext(collectionName) {
+  const contexts = {
+    'workers': 'Información de trabajadores y empleados de la empresa',
+    'users': 'Datos de usuarios del sistema',
+    'productos': 'Catálogo de productos disponibles',
+    'sales': 'Registro de ventas realizadas',
+    'suppliers': 'Información de proveedores',
+    'rawMaterials': 'Inventario de materias primas',
+    'attendance': 'Registros de asistencia de empleados',
+    'attendance_logs': 'Histórico detallado de asistencias',
+    'bonuses': 'Bonificaciones y beneficios de empleados',
+    'payrollSettings': 'Configuración de nómina',
+    'payroll_records': 'Registros históricos de nómina'
+  };
+  return contexts[collectionName] || `Datos de ${collectionName}`;
+}
+
+function getFriendlyFieldName(fieldName, collectionName) {
+  const fieldMappings = {
+    // Campos generales
+    'id': 'ID',
+    'name': 'Nombre',
+    'email': 'Correo electrónico',
+    'phone': 'Teléfono',
+    'address': 'Dirección',
+    'status': 'Estado',
+    'createdAt': 'Fecha de creación',
+    'updatedAt': 'Última actualización',
+    
+    // Trabajadores
+    'position': 'Puesto',
+    'department': 'Departamento',
+    'salary': 'Salario',
+    'hireDate': 'Fecha de contratación',
+    
+    // Productos
+    'price': 'Precio',
+    'stock': 'Stock disponible',
+    'category': 'Categoría',
+    'description': 'Descripción',
+    
+    // Ventas
+    'total': 'Total',
+    'customer': 'Cliente',
+    'date': 'Fecha',
+    'items': 'Productos vendidos',
+    
+    // Materiales
+    'quantity': 'Cantidad',
+    'unit': 'Unidad',
+    'supplier': 'Proveedor',
+    
+    // Asistencia
+    'checkIn': 'Entrada',
+    'checkOut': 'Salida',
+    'workerId': 'ID del trabajador',
+    'hours': 'Horas trabajadas'
+  };
+  
+  return fieldMappings[fieldName] || fieldName;
 }
 
 async function ingest() {
@@ -51,8 +136,8 @@ async function ingest() {
     const snap = await db.collection(collName).get();
     for (const doc of snap.docs) {
       const data = doc.data();
-      const title = data.title || data.name || doc.id;
-      const text = flattenDocData(data);
+      const title = data.title || data.name || data.nombre || `${collName} ${doc.id}`;
+      const text = flattenDocData(data, collName);
       const chunks = chunkText(text, 1200);
       const ids = chunks.map((_, i) => `${collName}/${doc.id}#${i}`);
 
