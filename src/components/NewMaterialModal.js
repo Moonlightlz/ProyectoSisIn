@@ -88,11 +88,37 @@ const NewMaterialModal = ({ isOpen, onClose, onSave, editingMaterial }) => {
             </div>
             <div className="form-group-modal">
               <label htmlFor="lowStockThreshold">Umbral Stock Bajo</label>
-              <input id="lowStockThreshold" type="number" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} placeholder="Ej: 20" />
+              <input 
+                id="lowStockThreshold" 
+                type="number" 
+                min="0" 
+                step="1"
+                value={lowStockThreshold} 
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || (parseFloat(value) >= 0 && !isNaN(parseFloat(value)))) {
+                    setLowStockThreshold(value);
+                  }
+                }} 
+                placeholder="Ej: 20" 
+              />
             </div>
             <div className="form-group-modal">
               <label htmlFor="cost">Costo Unitario (S/) (Opcional)</label>
-              <input id="cost" type="number" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Ej: 85.50" />
+              <input 
+                id="cost" 
+                type="number" 
+                min="0" 
+                step="0.01"
+                value={cost} 
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '' || (parseFloat(value) >= 0 && !isNaN(parseFloat(value)))) {
+                    setCost(value);
+                  }
+                }} 
+                placeholder="Ej: 85.50" 
+              />
             </div>
           </div>
         </div>

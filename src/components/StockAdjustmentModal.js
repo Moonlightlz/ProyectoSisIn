@@ -51,7 +51,21 @@ const StockAdjustmentModal = ({ isOpen, onClose, onSave, material }) => {
           
           <div className="form-group-modal">
             <label htmlFor="newStock">Nueva Cantidad de Stock</label>
-            <input id="newStock" type="number" value={newStock} onChange={(e) => setNewStock(e.target.value)} placeholder="Ej: 150" autoFocus />
+            <input 
+              id="newStock" 
+              type="number" 
+              min="0" 
+              step="1"
+              value={newStock} 
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || (parseFloat(value) >= 0 && !isNaN(parseFloat(value)))) {
+                  setNewStock(value);
+                }
+              }} 
+              placeholder="Ej: 150" 
+              autoFocus 
+            />
           </div>
           <div className="form-group-modal">
             <label htmlFor="reason">Motivo del Ajuste (Obligatorio)</label>

@@ -77,7 +77,20 @@ const StockMovementModal = ({ isOpen, onClose, onSave, movementType, materials, 
           </div>
           <div className="form-group-modal">
             <label htmlFor="quantity">Cantidad</label>
-            <input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="Ej: 50" />
+            <input 
+              id="quantity" 
+              type="number" 
+              min="0" 
+              step="1"
+              value={quantity} 
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || (parseFloat(value) >= 0 && !isNaN(parseFloat(value)))) {
+                  setQuantity(value);
+                }
+              }} 
+              placeholder="Ej: 50" 
+            />
           </div>
           <div className="form-group-modal">
             <label htmlFor="notes">Notas (Opcional)</label>
