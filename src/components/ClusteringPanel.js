@@ -588,8 +588,14 @@ const ClusteringPanel = () => {
  <tr>
  <th>{source === 'sales' ? 'Cluster' : 'Grupo'}</th>
  <th className="text-right"># Elementos</th>
-              {source === 'sales' && <th className="text-right">Monto Promedio</th>}
-              {source === 'sales' && <th className="text-right">Cantidad Promedio</th>}
+              {source === 'sales' ? (
+ <>
+ <th className="text-right">Monto Promedio</th>
+ <th className="text-right">Cantidad Promedio</th>
+ </>
+              ) : (
+                <><th className="text-right">Stock Promedio</th><th className="text-right">Umbral Promedio</th></>
+              )}
  <th>{source === 'sales' ? 'Distribuidores Principales' : 'Proveedores Principales'}</th>
  </tr>
  </thead>
