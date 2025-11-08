@@ -393,9 +393,20 @@ const enableSeederInWindow = () => {
   }
 };
 
-const getMaterialMovements = async (materialId) => {
+const getMaterialMovements = async (materialId, days = null) => {
     const movementsCollectionRef = collection(db, 'rawMaterials', materialId, 'movements');
-    const q = query(movementsCollectionRef, orderBy('timestamp', 'desc'));
+    let q;
+    if (days) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        q = query(
+            movementsCollectionRef, 
+            where('timestamp', '>=', Timestamp.fromDate(cutoffDate)),
+            orderBy('timestamp', 'desc')
+        );
+    } else {
+        q = query(movementsCollectionRef, orderBy('timestamp', 'desc'));
+    }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };

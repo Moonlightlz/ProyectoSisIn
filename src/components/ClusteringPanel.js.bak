@@ -1,0 +1,576 @@
+import React, { useState } from 'react';
+import { saleService } from '../services/saleService';
+import { rawMaterialService } from './rawMaterialService';
+import { Scatter } from 'react-chartjs-2';
+import { zScoreNormalize, kmeans } from '../services/clusteringService';
+import { unparse } from 'papaparse';
+import ClusterDetailModal from './ClusterDetailModal';
+import './ReportsPage.css';
+
+const PERIODS = {
+  MONTH: { days: 30, label: 'Mensual' },
+  QUARTER: { days: 90, label: 'Trimestral' },
+  SEMESTER: { days: 180, label: 'Semestral' }
+};
+
+const MATERIAL_GROUP_TYPES = {
+  CATEGORY: 'Por Categoría',
+  SUPPLIER: 'Por Proveedor',
+  STOCK_LEVEL: 'Por Nivel de Stock',
+  MOVEMENT: 'Por Rotación',
+  COST: 'Por Costo'
+};
+
+function computeSalesFeature(sale) {
+  // construye vector [log1p(totalAmount), totalQuantity]
+  const totalAmount = sale.totalAmount || (sale.products ? sale.products.reduce((s, p) => s + (p.subtotal || (p.pricePerDozen ? p.pricePerDozen * (p.dozens || 0) : 0)), 0) : 0);
+  const totalQuantity = sale.totalQuantity || (sale.products ? sale.products.reduce((s, p) => s + (p.quantity || 0), 0) : 0);
+  return [Math.log1p(totalAmount), totalQuantity];
+}
+
+function computeMaterialFeature(mat, movements) {
+  // Ahora retornamos un objeto con todas las características relevantes para diferentes tipos de agrupación
+  const stock = Number(mat.stock || 0);
+  const low = Number(mat.lowStockThreshold || 0);
+  const cost = Number(mat.cost || 0);
+  const movCount = Array.isArray(movements) ? movements.filter(m => m.type === 'salida').length : 0;
+  const movValue = Array.isArray(movements) ? movements.reduce((sum, m) => {
+    const qty = Number(m.quantity || 0);
+    return sum + (m.type === 'salida' ? -qty : qty);
+  }, 0) : 0;
+
+  return {
+    name: mat.name,
+    category: mat.category,
+    supplier: mat.supplier,
+    stock,
+    lowStockThreshold: low,
+    cost,
+    unit: mat.unit,
+    movementCount: movCount,
+    movementValue: movValue,
+    rotacion: stock > 0 ? movCount / stock : 0
+  };
+}
+
+const ClusteringPanel = () => {
+  const [source, setSource] = useState('sales');
+  const [k, setK] = useState(3);
+  const [running, setRunning] = useState(false);
+  const [clusterResult, setClusterResult] = useState(null);
+  const [infoMessage, setInfoMessage] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState('QUARTER');
+  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [materialGroupType, setMaterialGroupType] = useState('CATEGORY');
+  const [availableProviders, setAvailableProviders] = useState([]);
+  const [selectedProviders, setSelectedProviders] = useState('');
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [selectedProducts, setSelectedProducts] = useState('');
+  const [availableSizes, setAvailableSizes] = useState([]);
+  const [selectedSizes, setSelectedSizes] = useState('');
+
+  const [availableSuppliers, setAvailableSuppliers] = useState([]);
+  const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+
+  const runSales = async () => {
+    try {
+      setRunning(true);
+      setInfoMessage('');
+      const days = PERIODS[selectedPeriod].days;
+      const endDate = new Date();
+      const startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - days);
+      
+      const sales = await saleService.getSalesByPeriod(startDate, endDate);
+      // cargar opciones disponibles si no existen
+      if (availableProviders.length === 0 || availableProducts.length === 0 || availableSizes.length === 0) {
+        const provs = [];
+        const prods = new Map();
+        const sizesSet = new Set();
+        sales.forEach(s => {
+          if (s.distributor?.name) provs.push(s.distributor.name);
+          (s.products || []).forEach(p => {
+            if (p.productId) prods.set(p.productId, p.productName || p.productId);
+            if (p.sizes) {
+              const parts = String(p.sizes).split(',').map(x => x.trim()).filter(Boolean);
+              parts.forEach(sz => sizesSet.add(sz));
+            }
+          });
+        });
+        setAvailableProviders(Array.from(new Set(provs)));
+        setAvailableProducts(Array.from(prods.entries()).map(([id, name]) => ({ id, name })));
+        setAvailableSizes(Array.from(sizesSet));
+        // seleccionar Todos por defecto
+        setSelectedProviders('');
+        setSelectedProducts('');
+        setSelectedSizes('');
+      }
+      // aplicar filtros
+      let filteredSales = sales;
+      if (selectedProviders && selectedProviders !== '') {
+        filteredSales = filteredSales.filter(s => selectedProviders === (s.distributor?.name || ''));
+      }
+      if (selectedProducts && selectedProducts !== '') {
+        filteredSales = filteredSales.filter(s => (s.products || []).some(p => selectedProducts === p.productId));
+      }
+      if (selectedSizes && selectedSizes !== '') {
+        filteredSales = filteredSales.filter(s => (s.products || []).some(p => {
+          const parts = String(p.sizes || '').split(',').map(x => x.trim()).filter(Boolean);
+          return parts.some(sz => selectedSizes === sz);
+        }));
+      }
+  const vectors = filteredSales.map(s => computeSalesFeature(s));
+  const MAX_SAMPLES = 1500;
+  let usedSales = sales;
+  let usedVectors = vectors;
+  if (vectors.length > MAX_SAMPLES) {
+        // muestreo aleatorio sin reemplazo
+        const indices = Array.from({ length: vectors.length }, (_, i) => i);
+        for (let i = indices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        const selected = indices.slice(0, MAX_SAMPLES).sort((a,b) => a-b);
+        usedSales = selected.map(i => sales[i]);
+        usedVectors = selected.map(i => vectors[i]);
+        setInfoMessage(`Se usaron ${usedVectors.length} de ${vectors.length} registros (máx ${MAX_SAMPLES}).`);
+      }
+  const effectiveK = Math.max(2, Math.min(k, Math.min(10, Math.max(2, usedVectors.length))));
+  const { matrix: normMatrix } = zScoreNormalize(usedVectors);
+  const { labels, centroids } = kmeans(normMatrix, effectiveK);
+  const clusters = {};
+  labels.forEach((lab, i) => { clusters[lab] = clusters[lab] || []; clusters[lab].push(usedSales[i]); });
+  setClusterResult({ labels, clusters, totalItems: sales.length, usedItems: usedSales.length, effectiveK, usedVectors: normMatrix, centroids });
+    } catch (e) {
+      console.error(e);
+    }
+    setRunning(false);
+  };
+
+  const runMaterials = async () => {
+    setRunning(true);
+    setInfoMessage('');
+    
+    try {
+      const days = PERIODS[selectedPeriod].days;
+      console.log('Obteniendo materiales...');
+      const mats = await rawMaterialService.getRawMaterials();
+      console.log('Materiales obtenidos:', mats.length);
+      const rows = [];
+      
+      console.log('Procesando movimientos...');
+      for (const m of mats) {
+        try {
+          const movements = await rawMaterialService.getMaterialMovements(m.id, days);
+          const materialFeatures = computeMaterialFeature(m, movements);
+          rows.push({ mat: m, movements, features: materialFeatures });
+        } catch (err) {
+          console.error('Error al procesar material:', m.id, err);
+          // Continuamos con el siguiente material
+        }
+      }
+      console.log('Movimientos procesados:', rows.length);
+
+      // cargar opciones si es necesario
+      if (availableSuppliers.length === 0 || availableCategories.length === 0) {
+        const supps = new Set();
+        const cats = new Set();
+        rows.forEach(r => {
+          if (r.mat?.supplier) supps.add(r.mat.supplier);
+          if (r.mat?.category) cats.add(r.mat.category);
+        });
+        setAvailableSuppliers(Array.from(supps));
+        setAvailableCategories(Array.from(cats));
+        setSelectedSuppliers('');
+        setSelectedCategories('');
+      }
+
+      // aplicar filtros de materias primas
+      let filteredRows = rows;
+      if (selectedSuppliers && selectedSuppliers !== '') {
+        filteredRows = filteredRows.filter(r => selectedSuppliers === (r.mat?.supplier || ''));
+      }
+      if (selectedCategories && selectedCategories !== '') {
+        filteredRows = filteredRows.filter(r => selectedCategories === (r.mat?.category || ''));
+      }
+
+      // Asegurarse de que hay datos antes de procesar
+      if (filteredRows.length === 0) {
+        setInfoMessage('No hay datos suficientes para realizar el análisis en el período seleccionado.');
+        setRunning(false);
+        return;
+      }
+
+      // Agrupar materiales según el criterio seleccionado
+      const groupedMaterials = {};
+
+      switch (materialGroupType) {
+        case 'CATEGORY':
+          filteredRows.forEach(r => {
+            const category = r.mat.category || 'Sin Categoría';
+            groupedMaterials[category] = groupedMaterials[category] || [];
+            groupedMaterials[category].push(r);
+          });
+          break;
+
+        case 'SUPPLIER':
+          filteredRows.forEach(r => {
+            const supplier = r.mat.supplier || 'Sin Proveedor';
+            groupedMaterials[supplier] = groupedMaterials[supplier] || [];
+            groupedMaterials[supplier].push(r);
+          });
+          break;
+
+        case 'STOCK_LEVEL':
+          filteredRows.forEach(r => {
+            let level = 'Normal';
+            const stock = r.mat.stock || 0;
+            const threshold = r.mat.lowStockThreshold || 0;
+            
+            if (stock <= threshold) {
+              level = 'Stock Bajo';
+            } else if (stock <= threshold * 1.5) {
+              level = 'Stock Medio';
+            } else {
+              level = 'Stock Alto';
+            }
+            
+            groupedMaterials[level] = groupedMaterials[level] || [];
+            groupedMaterials[level].push(r);
+          });
+          break;
+
+        case 'MOVEMENT':
+          filteredRows.forEach(r => {
+            const rotacion = r.features.rotacion;
+            let nivel = 'Sin Movimiento';
+            
+            if (rotacion > 2) {
+              nivel = 'Alta Rotación';
+            } else if (rotacion > 0.5) {
+              nivel = 'Rotación Media';
+            } else if (rotacion > 0) {
+              nivel = 'Baja Rotación';
+            }
+            
+            groupedMaterials[nivel] = groupedMaterials[nivel] || [];
+            groupedMaterials[nivel].push(r);
+          });
+          break;
+
+        case 'COST':
+          filteredRows.forEach(r => {
+            const cost = r.mat.cost || 0;
+            let rango = 'Sin Costo';
+            
+            if (cost > 100) {
+              rango = 'Costo Alto (>S/100)';
+            } else if (cost > 50) {
+              rango = 'Costo Medio (S/50-100)';
+            } else if (cost > 0) {
+              rango = 'Costo Bajo (<S/50)';
+            }
+            
+            groupedMaterials[rango] = groupedMaterials[rango] || [];
+            groupedMaterials[rango].push(r);
+          });
+          break;
+      }
+
+      // Crear un "cluster" por cada grupo
+      const clusters = {};
+      Object.entries(groupedMaterials).forEach(([group, items], idx) => {
+        clusters[idx] = items;
+      });
+
+      // Actualizar el resultado
+      setClusterResult({
+        labels: Object.keys(clusters).map(Number),
+        clusters,
+        totalItems: filteredRows.length,
+        usedItems: filteredRows.length,
+        effectiveK: Object.keys(clusters).length,
+        groupNames: Object.keys(groupedMaterials)
+      });
+    } catch (e) {
+      console.error(e);
+      setInfoMessage('Error al procesar los datos: ' + e.message);
+    }
+    setRunning(false);
+  };
+
+  const onRun = async () => {
+    console.log('Iniciando análisis...');
+    setClusterResult(null);
+    try {
+      if (source === 'sales') {
+        await runSales();
+      } else {
+        await runMaterials();
+      }
+    } catch (error) {
+      console.error('Error al ejecutar clustering:', error);
+      setInfoMessage('Error al procesar los datos: ' + error.message);
+      setRunning(false);
+    }
+  };
+
+  const clusterName = (idx) => {
+    if (clusterResult?.groupNames && clusterResult.groupNames[idx]) {
+      return clusterResult.groupNames[idx];
+    }
+    if (typeof idx !== 'number') return 'Grupo Inválido';
+    if (idx < 26) return `Grupo ${String.fromCharCode(65 + idx)}`;
+    return `Grupo ${idx + 1}`;
+  };
+
+  const exportCSV = () => {
+    if (!clusterResult) return;
+    const rows = [];
+    if (source === 'sales') {
+      Object.keys(clusterResult.clusters).forEach((lab) => {
+        clusterResult.clusters[lab].forEach(sale => {
+          rows.push({ id: sale.id, saleNumber: sale.saleNumber || '', date: sale.date ? sale.date.toString() : '', totalAmount: sale.totalAmount || 0, totalQuantity: sale.totalQuantity || 0, cluster: clusterName(Number(lab)) });
+        });
+      });
+    } else {
+      Object.keys(clusterResult.clusters).forEach((lab) => {
+        clusterResult.clusters[lab].forEach(row => {
+          const m = row.mat || {};
+          rows.push({ id: m.id, name: m.name || '', stock: m.stock || 0, lowStockThreshold: m.lowStockThreshold || '', cluster: clusterName(Number(lab)) });
+        });
+      });
+    }
+    const csv = unparse(rows);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${source}-clusters.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const renderResult = () => {
+    if (!clusterResult) return null;
+
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#a78bfa', '#ef4444', '#84cc16'];
+    const datasets = [];
+    
+    Object.entries(clusterResult.clusters).forEach(([idx, items]) => {
+      datasets.push({
+        label: clusterName(Number(idx)),
+        data: items.map(item => ({
+          x: item.mat?.stock || 0,
+          y: item.mat?.lowStockThreshold || 0
+        })),
+        backgroundColor: colors[Number(idx) % colors.length],
+        pointRadius: 3,
+        pointHoverRadius: 5
+      });
+    });
+
+    const chartOptions = {
+      scales: {
+        x: { 
+          title: { 
+            display: true, 
+            text: source === 'sales' ? 'Monto Total (log)' : 'Stock Actual'
+          },
+          beginAtZero: true
+        },
+        y: { 
+          title: { 
+            display: true, 
+            text: source === 'sales' ? 'Cantidad Total' : 'Stock Mínimo'
+          },
+          beginAtZero: true
+        }
+      },
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 10 } },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const label = context.dataset.label || '';
+              const item = clusterResult.clusters[Number(context.datasetIndex)][context.dataIndex];
+              if (source === 'sales') {
+                return `${label}: Monto ${Math.exp(context.parsed.x).toFixed(0)}, Cantidad ${context.parsed.y.toFixed(0)}`;
+              } else {
+                return [
+                  `${label}: ${item.mat?.name || 'Sin nombre'}`,
+                  `Stock: ${item.mat?.stock || 0}`,
+                  `Mínimo: ${item.mat?.lowStockThreshold || 0}`,
+                  `Proveedor: ${item.mat?.supplier || 'Sin proveedor'}`
+                ];
+              }
+            }
+          }
+        }
+      },
+      maintainAspectRatio: false,
+      responsive: true
+    };
+
+    return (
+      <div className="chart-card clustering-card">
+        <h3>Resultados</h3>
+        <div style={{ height: '350px', position: 'relative', marginBottom: '20px' }}>
+          <Scatter data={{ datasets }} options={chartOptions} />
+        </div>
+        
+        {infoMessage && <p style={{ marginTop: 8, color: '#475569' }}>{infoMessage}</p>}
+        
+        <div style={{ marginTop: 12, marginBottom: 16 }}>
+          <button className="btn btn-secondary btn-sm" onClick={exportCSV}>Exportar CSV</button>
+          <button className="btn btn-secondary btn-sm" style={{ marginLeft: 8 }} onClick={() => { setClusterResult(null); }}>Cerrar</button>
+        </div>
+
+        <table className="worker-hours-table" style={{ fontSize: '0.9rem' }}>
+          <thead>
+            <tr>
+              <th>Segmento</th>
+              <th>Cantidad</th>
+              <th>{source === 'sales' ? 'Monto Promedio' : 'Stock Promedio'}</th>
+              <th>{source === 'sales' ? 'Cantidad Promedio' : 'Movimientos'}</th>
+              <th>{source === 'sales' ? 'Distribuidores' : 'Proveedores'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(clusterResult.clusters)
+              .map(lab => ({
+                lab,
+                items: clusterResult.clusters[lab],
+                size: clusterResult.clusters[lab].length
+              }))
+              .sort((a, b) => b.size - a.size)
+              .map(({ lab, items, size }) => {
+                let avgAmount = 0;
+                let avgQty = 0;
+                if (source === 'sales') {
+                  avgAmount = items.reduce((s, it) => s + (it.totalAmount || 0), 0) / Math.max(1, size);
+                  avgQty = items.reduce((s, it) => s + (it.totalQuantity || 0), 0) / Math.max(1, size);
+                } else {
+                  avgAmount = items.reduce((s, it) => s + (it.mat?.stock || 0), 0) / Math.max(1, size);
+                  avgQty = items.reduce((s, it) => s + (it.movements?.length || 0), 0) / Math.max(1, size);
+                }
+                const examples = items.slice(0,3).map(it => 
+                  source === 'sales' ? 
+                    (it.distributor?.name || 'Sin distribuidor') : 
+                    (it.mat?.supplier || 'Sin proveedor')
+                ).join(', ');
+                return (
+                  <tr key={lab}>
+                    <td>{clusterName(Number(lab))}</td>
+                    <td>{size}</td>
+                    <td>{avgAmount.toFixed(2)}</td>
+                    <td>{avgQty.toFixed(2)}</td>
+                    <td>{examples}</td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  return (
+    <div className="chart-card clustering-card">
+      <div className="chart-header">
+        <h3>Clustering de {source === 'sales' ? 'Ventas' : 'Materias Primas'}</h3>
+      </div>
+      
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+        <label>Fuente:</label>
+        <select value={source} onChange={e => setSource(e.target.value)}>
+          <option value="sales">Ventas</option>
+          <option value="materials">Materia Prima</option>
+        </select>
+        
+        {source === 'materials' && (
+          <>
+            <label>Agrupar por:</label>
+            <select value={materialGroupType} onChange={e => setMaterialGroupType(e.target.value)}>
+              {Object.entries(MATERIAL_GROUP_TYPES).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </>
+        )}
+        
+        <label>Periodo:</label>
+        <select value={selectedPeriod} onChange={e => setSelectedPeriod(e.target.value)}>
+          {Object.entries(PERIODS).map(([key, { label }]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
+        
+        <button 
+          className="btn btn-primary btn-sm" 
+          onClick={onRun} 
+          disabled={running}
+        >
+          {running ? 'Procesando...' : 'Ejecutar'}
+        </button>
+      </div>
+      
+      <div style={{ marginBottom: 12 }}>
+        {source === 'sales' ? (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div>
+              <label>Proveedores</label>
+              <br />
+              <select value={selectedProviders} onChange={e => setSelectedProviders(e.target.value)} style={{ minWidth: 200 }}>
+                <option value="">Todos</option>
+                {availableProviders.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>Productos</label>
+              <br />
+              <select value={selectedProducts} onChange={e => setSelectedProducts(e.target.value)} style={{ minWidth: 260 }}>
+                <option value="">Todos</option>
+                {availableProducts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>Tallas</label>
+              <br />
+              <select value={selectedSizes} onChange={e => setSelectedSizes(e.target.value)} style={{ minWidth: 120 }}>
+                <option value="">Todos</option>
+                {availableSizes.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div>
+              <label>Proveedores</label>
+              <br />
+              <select value={selectedSuppliers} onChange={e => setSelectedSuppliers(e.target.value)} style={{ minWidth: 220 }}>
+                <option value="">Todos</option>
+                {availableSuppliers.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>Categorías</label>
+              <br />
+              <select value={selectedCategories} onChange={e => setSelectedCategories(e.target.value)} style={{ minWidth: 220 }}>
+                <option value="">Todos</option>
+                {availableCategories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {renderResult()}
+    </div>
+  );
+};
+
+export default ClusteringPanel;

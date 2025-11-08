@@ -30,6 +30,7 @@ function AppLayout({ onLogout }) {
           {isAdmin && <NavLink to="/users">Usuarios</NavLink>}
           {isAdmin && <NavLink to="/workers">Trabajadores</NavLink>}
           {isAdmin && <NavLink to="/reports">Reportes</NavLink>}
+          {isAdmin && <NavLink to="/clustering">Clustering</NavLink>}
           <button onClick={handleLogout} className="logout-btn">
             Cerrar Sesión
           </button>

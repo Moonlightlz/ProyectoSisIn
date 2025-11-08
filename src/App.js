@@ -9,6 +9,7 @@ import HomePage from './components/HomePage';
 import UserManagement from './components/UserManagement';
 import WorkerManagement from './components/WorkerManagement';
 import ReportsPage from './components/ReportsPage'; // 1. Importar ReportsPage
+import ClusteringPage from './components/ClusteringPage';
 import AppLayout from './components/AppLayout';
 
 import './App.css';
@@ -46,6 +47,7 @@ function AppContent() {
                   <Route path="users" element={<UserManagement />} />
                   <Route path="workers" element={<WorkerManagement />} />
                   <Route path="reports" element={<ReportsPage />} /> {/* 2. Añadir la ruta */}
+                  <Route path="clustering" element={<ClusteringPage />} />
                 </Route>
               </Routes>
             ) : (
