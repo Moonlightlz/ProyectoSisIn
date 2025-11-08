@@ -8,7 +8,6 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title, BarElement, Categ
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import './ReportsPage.css';
 import HistoryAnalysisModal from './HistoryAnalysisModal'; // Importar el nuevo modal
-import ClusteringPanel from './ClusteringPanel';
 
 // Utilidad: calcula horas trabajadas por día y totales por trabajador (mes actual)
 function computeWorkerHoursData(attendanceData) {
@@ -1177,7 +1176,6 @@ function ReportsPage() {
         <LowStockChart materials={rawMaterials} onShowHistory={handleShowHistory} />
         <MaterialCategoryChart materials={rawMaterials} onShowHistory={handleShowHistory} />
         <BestSellingProductsChart sales={sales} onShowHistory={handleShowHistory} />
-        <ClusteringPanel />
         <WorkerHoursTable workerHoursData={workerHoursData} />
         <BonusCandidates workerHoursData={workerHoursData} onShowHistory={handleShowHistory} />
       </div>
