@@ -27,7 +27,7 @@ const SalesStats = ({ sales }) => {
   // Corregido para no ser sensible a mayúsculas/minúsculas
   const pendingSales = sales.filter(sale => sale.status.toLowerCase() === 'pendiente').length;
   const completedSales = sales.filter(sale => sale.status.toLowerCase() === 'entregado').length;
-  const inProcessSales = sales.filter(sale => sale.status.toLowerCase().replace('_', ' ') === 'en proceso').length;
+  const inProcessSales = sales.filter(sale => sale.status.toLowerCase() === 'en_proceso').length;
 
 
   return (
@@ -89,7 +89,7 @@ const SaleDetailsView = ({ sale, onClose }) => {
           <div className="modal-title-group">
             <h2>Detalle de Venta #{sale.saleNumber}</h2>
             <span className={`status-badge status-${sale.status.toLowerCase().replace('_', '-')}`}>
-              {sale.status.replace('_', ' ')}
+              {sale.status.replace(/_/g, ' ')}
             </span>
           </div>
           <button className="modal-close-btn" onClick={onClose}>&times;</button>
@@ -191,8 +191,7 @@ function HomePage() {
           s.date ? s.date.toLocaleDateString() : '',
           s.client?.name || '',
           s.distributor?.name || '',
-          (s.totalAmount ?? 0),
-          (s.status || '').replace('_', ' '),
+          (s.status || '').replace(/_/g, ' '),
         ]));
 
       if (data.length === 0) {
@@ -237,7 +236,7 @@ function HomePage() {
           s.client?.name || '',
           s.distributor?.name || '',
           `S/ ${(s.totalAmount ?? 0).toFixed(2)}`,
-          (s.status || '').replace('_', ' '),
+          (s.status || '').replace(/_/g, ' '),
         ]));
 
       if (rows.length === 0) {
@@ -500,7 +499,7 @@ function HomePage() {
                         <td>S/ {sale.totalAmount.toFixed(2)}</td>
                         <td>
                           <span className={`status-badge status-${sale.status.toLowerCase().replace('_', '-')}`}>
-                            {sale.status.replace('_', ' ')}
+                            {sale.status.replace(/_/g, ' ')}
                           </span>
                         </td>
                         <td>
@@ -620,7 +619,7 @@ function HomePage() {
                             <td>S/ {sale.totalAmount.toFixed(2)}</td>
                             <td>
                               <span className={`status-badge status-${sale.status.toLowerCase().replace('_', '-')}`}>
-                                {sale.status.replace('_', ' ')}
+                                {sale.status.replace(/_/g, ' ')}
                               </span>
                             </td>
                             <td>
