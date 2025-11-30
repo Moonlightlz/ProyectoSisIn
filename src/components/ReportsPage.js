@@ -473,7 +473,7 @@ const BestSellingProductsChart = ({ sales, onShowHistory }) => {
 };
 
 // --- NUEVA TABLA DE HORAS TRABAJADAS POR EMPLEADO ---
-const WorkerHoursTable = ({ workerHoursData }) => {
+const WorkerHoursTable = ({ workerHoursData, onShowHistory }) => {
   if (!workerHoursData || workerHoursData.length === 0) {
     return (
       <div className="worker-hours-card">
@@ -485,7 +485,12 @@ const WorkerHoursTable = ({ workerHoursData }) => {
           <p>No hay registros de asistencia para este mes.</p>
         </div>
         <div className="chart-footer">
-          <button className="btn btn-secondary btn-sm" disabled>Historico</button>
+          <button 
+            className="btn btn-secondary btn-sm" 
+            onClick={() => onShowHistory({}, 'Rendimiento de Empleados')}
+          >
+            Historico
+          </button>
         </div>
       </div>
     );
@@ -504,6 +509,13 @@ const WorkerHoursTable = ({ workerHoursData }) => {
   // Asumimos 8 horas diarias como meta; robusto ante undefined/strings
   const hoursArray = sorted.map(w => Number(w.hours ?? 0));
   const maxHoursGoal = Math.max(8 * 22, ...hoursArray);
+
+  // Preparar datos para el histórico
+  const chartDataForHistory = sorted.reduce((acc, worker) => {
+    const key = worker.name.replace(/\s+/g, '_').toLowerCase();
+    acc[key] = `${Number(worker.hours ?? 0).toFixed(1)} horas totales (${Number(worker.avgHours ?? 0).toFixed(1)}h promedio/día)`;
+    return acc;
+  }, {});
 
   return (
     <div className="worker-hours-card">
@@ -543,6 +555,14 @@ const WorkerHoursTable = ({ workerHoursData }) => {
           })}
         </tbody>
       </table>
+      <div className="chart-footer">
+        <button 
+          className="btn btn-secondary btn-sm" 
+          onClick={() => onShowHistory(chartDataForHistory, 'Rendimiento de Empleados')}
+        >
+          Historico
+        </button>
+      </div>
     </div>
   );
 };
@@ -1112,31 +1132,12 @@ function ReportsPage() {
     setIsHistoryModalOpen(true);
     setIsAiLoading(true);
     setHistoryTitle(chartTitle);
-    setHistoryData(chartData); // <-- NUEVO: Guardar los datos para la tabla
+    setHistoryData(chartData);
     setHistoryAnalysis(''); // Limpiar análisis anterior
 
-    const prompt = `
-      Eres un asistente de análisis de datos para una fábrica de calzado.
-      A continuación se te presentan datos del reporte "${chartTitle}". Estos datos ya se muestran en una tabla al usuario.
-      Tu tarea es generar una breve descripción o conclusión basada en estos números, sin volver a listarlos. Por ejemplo, puedes indicar cuál es la categoría más grande, la más pequeña, o si un valor es notablemente alto o bajo. Habla como si le explicaras a un gerente.
-      
-      Datos para tu análisis (no los repitas en la respuesta):
-      ${JSON.stringify(chartData, null, 2)}
-    `;
-
     try {
-      // Aquí se haría la llamada al backend que tienes en la carpeta /Modelo
-      // Por ahora, simularemos una respuesta para no depender del backend.
-      // const response = await fetch('http://localhost:3030/qa', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ query: prompt, topK: 1 }),
-      // });
-      // const data = await response.json();
-      // setHistoryAnalysis(data.answer);
-
-      // --- SIMULACIÓN DE RESPUESTA ---
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simular latencia de red
+      // Simular un pequeño delay para la UI
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       // Encontrar la clave y el valor más alto para una respuesta más inteligente
       let maxKey = '';
@@ -1176,7 +1177,7 @@ function ReportsPage() {
         <LowStockChart materials={rawMaterials} onShowHistory={handleShowHistory} />
         <MaterialCategoryChart materials={rawMaterials} onShowHistory={handleShowHistory} />
         <BestSellingProductsChart sales={sales} onShowHistory={handleShowHistory} />
-        <WorkerHoursTable workerHoursData={workerHoursData} />
+        <WorkerHoursTable workerHoursData={workerHoursData} onShowHistory={handleShowHistory} />
         <BonusCandidates workerHoursData={workerHoursData} onShowHistory={handleShowHistory} />
       </div>
       <HistoryAnalysisModal

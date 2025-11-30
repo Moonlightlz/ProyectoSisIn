@@ -65,7 +65,7 @@
 
 .role-select {
   appearance: none; /* Elimina la flecha por defecto del select */
-  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007bff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13.2-5.4H18.6c-5%200-9.3%201.8-13.2%205.4A17.6%2017.6%200%200%200%200%2082.6c0%204.8%201.8%209.3%205.4%2013.2l128%20128c3.9%203.9%208.4%205.4%2013.2%205.4s9.3-1.8%2013.2-5.4l128-128c3.9-3.9%205.4-8.4%205.4-13.2%200-4.8-1.8-9.3-5.4-13.2z%22%2F%3E%3C%2Fsvg%3E');
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='292.4' height='292.4'%3E%3Cpath fill='%23007bff' d='M287 69.4a17.6 17.6 0 0 0-13.2-5.4H18.6c-5 0-9.3 1.8-13.2 5.4A17.6 17.6 0 0 0 0 82.6c0 4.8 1.8 9.3 5.4 13.2l128 128c3.9 3.9 8.4 5.4 13.2 5.4s9.3-1.8 13.2-5.4l128-128c3.9-3.9 5.4-8.4 5.4-13.2 0-4.8-1.8-9.3-5.4-13.2z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   background-size: 12px;

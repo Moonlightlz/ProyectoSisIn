@@ -39,7 +39,7 @@
 }
 
 .form-group-modal.full-width {
-  grid-column: 1 / -1;
+  grid-column: 1 / span 12;
 }
 
 .form-group-modal label {

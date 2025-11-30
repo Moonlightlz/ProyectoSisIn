@@ -238,8 +238,10 @@
 
 .summary-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .summary-item {
@@ -247,6 +249,10 @@
   justify-content: space-between;
   padding: 5px 0;
   font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  gap: 8px;
 }
 
 .summary-item span:first-child {
@@ -259,7 +265,7 @@
 }
 
 .summary-item.total {
-  grid-column: 1 / -1;
+  grid-column: 1 / span 12;
   padding: 10px 0;
   border-top: 1px solid #dee2e6;
   margin-top: 5px;

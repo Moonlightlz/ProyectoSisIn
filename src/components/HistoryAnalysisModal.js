@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaTimes, FaRobot } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import './HistoryAnalysisModal.css';
 
 const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, data, isLoading }) => {
@@ -10,7 +10,7 @@ const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, data, isLoadin
       <div className="history-analysis-modal">
         <div className="modal-header">
           <h3 className="modal-title">
-            <FaRobot /> Análisis del Histórico: {title}
+            Análisis del Histórico: {title}
           </h3>
           <button onClick={onClose} className="modal-close-btn">
             <FaTimes />
@@ -20,7 +20,7 @@ const HistoryAnalysisModal = ({ isOpen, onClose, title, analysis, data, isLoadin
           {isLoading ? (
             <div className="loading-analysis">
               <div className="spinner"></div>
-              <p>Generando análisis con IA...</p>
+              <p>Generando análisis...</p>
             </div>
           ) : (
             <div className="analysis-content">

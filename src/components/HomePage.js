@@ -177,6 +177,7 @@ function HomePage() {
   const [loading, setLoading] = useState(false);
   const [allSalesSearchTerm, setAllSalesSearchTerm] = useState('');
 
+
   // Exportar TODAS las ventas a Excel
   const handleExportAllSalesToExcel = () => {
     try {
