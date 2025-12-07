@@ -6,10 +6,31 @@ import ProductManagement from './ProductManagement';
 import NewSaleForm from './NewSaleForm';
 import RawMaterialInventory from './RawMaterialInventory'; // Importamos el nuevo componente
 import './HomePage.css';
-import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaCog, FaChartLine, FaFileInvoiceDollar, FaWarehouse, FaFilePdf, FaFileExcel } from 'react-icons/fa';
+import { FaUser, FaStore, FaBoxOpen, FaDollarSign, FaEye, FaCog, FaChartLine, FaFileInvoiceDollar, FaWarehouse, FaFilePdf, FaFileExcel, FaExclamationTriangle } from 'react-icons/fa';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+
+// Componente de confirmación personalizado
+const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = 'Confirmar', cancelText = 'Cancelar' }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="confirm-modal-overlay" onClick={onClose}>
+      <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="confirm-icon">
+          <FaExclamationTriangle />
+        </div>
+        <h3>{title}</h3>
+        <p>{message}</p>
+        <div className="confirm-actions">
+          <button className="btn-cancel" onClick={onClose}>{cancelText}</button>
+          <button className="btn-confirm" onClick={onConfirm}>{confirmText}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Estado de vista actual
 const VIEWS = {
@@ -73,7 +94,12 @@ const SalesStats = ({ sales }) => {
 };
 
 // Componente para mostrar los detalles de la venta
-const SaleDetailsView = ({ sale, onClose }) => {
+const SaleDetailsView = ({ sale, onClose, onStatusChange }) => {
+  const { currentUser } = useAuth();
+  const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const [newStatus, setNewStatus] = useState(sale?.status || '');
+  const [showConfirm, setShowConfirm] = useState(false);
+
   if (!sale) return null;
 
   const handleOverlayClick = (e) => {
@@ -82,8 +108,41 @@ const SaleDetailsView = ({ sale, onClose }) => {
     }
   };
 
+  const handleStatusChange = async () => {
+    if (!newStatus || newStatus === sale.status) {
+      alert('Selecciona un estado diferente');
+      return;
+    }
+
+    setShowConfirm(true);
+  };
+
+  const confirmStatusChange = async () => {
+    setShowConfirm(false);
+    setIsChangingStatus(true);
+    try {
+      await saleService.updateSaleStatus(sale.id, newStatus, currentUser.email);
+      alert('Estado actualizado correctamente');
+      onStatusChange(); // Recargar las ventas
+      onClose();
+    } catch (error) {
+      console.error('Error al actualizar estado:', error);
+      alert('Error al actualizar el estado: ' + error.message);
+    } finally {
+      setIsChangingStatus(false);
+    }
+  };
+
   return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
+    <>
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={confirmStatusChange}
+        title="Confirmar Cambio de Estado"
+        message={`¿Estás seguro de cambiar el estado a "${newStatus.replace(/_/g, ' ')}"?`}
+      />
+      <div className="modal-overlay" onClick={handleOverlayClick}>
       <div className="sale-card-main">
         <div className="sale-details-header">
           <div className="modal-title-group">
@@ -93,6 +152,30 @@ const SaleDetailsView = ({ sale, onClose }) => {
             </span>
           </div>
           <button className="modal-close-btn" onClick={onClose}>&times;</button>
+        </div>
+
+        {/* Sección para cambiar estado */}
+        <div className="status-change-section">
+          <h4><FaCog className="info-icon" /> Cambiar Estado</h4>
+          <div className="status-change-controls">
+            <select 
+              value={newStatus} 
+              onChange={(e) => setNewStatus(e.target.value)}
+              disabled={isChangingStatus}
+              className="status-select"
+            >
+              <option value="PENDIENTE">Pendiente</option>
+              <option value="EN_PROCESO">En Proceso</option>
+              <option value="ENTREGADO">Entregado</option>
+            </select>
+            <button 
+              onClick={handleStatusChange}
+              disabled={isChangingStatus || newStatus === sale.status}
+              className="btn-update-status"
+            >
+              {isChangingStatus ? 'Actualizando...' : 'Actualizar Estado'}
+            </button>
+          </div>
         </div>
 
         <div className="info-grid">
@@ -164,7 +247,8 @@ const SaleDetailsView = ({ sale, onClose }) => {
           
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
@@ -176,6 +260,8 @@ function HomePage() {
   const [selectedSale, setSelectedSale] = useState(null);
   const [loading, setLoading] = useState(false);
   const [allSalesSearchTerm, setAllSalesSearchTerm] = useState('');
+  const [dateFilterStart, setDateFilterStart] = useState('');
+  const [dateFilterEnd, setDateFilterEnd] = useState('');
 
 
   // Exportar TODAS las ventas a Excel
@@ -364,9 +450,33 @@ function HomePage() {
 
       case VIEWS.ALL_SALES: {
         const filteredSales = allSales.filter(s => {
+          // Filtro por término de búsqueda
           const term = allSalesSearchTerm.trim().toLowerCase();
-          if (!term) return true;
-          return (s.saleNumber || '').toLowerCase().includes(term);
+          if (term && !(s.saleNumber || '').toLowerCase().includes(term)) {
+            return false;
+          }
+          
+          // Filtro por fecha de inicio
+          if (dateFilterStart) {
+            const saleDate = s.date?.toDate ? s.date.toDate() : new Date(s.date);
+            const startDate = new Date(dateFilterStart);
+            startDate.setHours(0, 0, 0, 0);
+            if (saleDate < startDate) {
+              return false;
+            }
+          }
+          
+          // Filtro por fecha de fin
+          if (dateFilterEnd) {
+            const saleDate = s.date?.toDate ? s.date.toDate() : new Date(s.date);
+            const endDate = new Date(dateFilterEnd);
+            endDate.setHours(23, 59, 59, 999);
+            if (saleDate > endDate) {
+              return false;
+            }
+          }
+          
+          return true;
         });
         const totalFilteredAmount = filteredSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
         return (
@@ -456,21 +566,55 @@ function HomePage() {
               </div>
             </div>
 
-            {/* Buscador por número de venta */}
-            <div className="search-bar" style={{ margin: '1rem 0', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <label htmlFor="allSalesSearch" style={{ fontWeight: 600 }}>Buscar</label>
-              <input
-                id="allSalesSearch"
-                type="text"
-                className="search-input"
-                placeholder="Buscar por número de venta (ej. VZ-...)"
-                value={allSalesSearchTerm}
-                onChange={(e) => setAllSalesSearchTerm(e.target.value)}
-                style={{ flex: 1, padding: '0.6rem 0.8rem' }}
-              />
-              {allSalesSearchTerm && (
-                <button className="btn btn-secondary" onClick={() => setAllSalesSearchTerm('')}>
-                  Limpiar
+            {/* Buscador y filtros de fecha */}
+            <div className="filters-container" style={{ margin: '1rem 0', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 300px', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <label htmlFor="allSalesSearch" style={{ fontWeight: 600 }}>Buscar:</label>
+                <input
+                  id="allSalesSearch"
+                  type="text"
+                  className="search-input"
+                  placeholder="Buscar por número de venta (ej. VZ-...)"
+                  value={allSalesSearchTerm}
+                  onChange={(e) => setAllSalesSearchTerm(e.target.value)}
+                  style={{ flex: 1, padding: '0.6rem 0.8rem' }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <label htmlFor="dateStart" style={{ fontWeight: 600 }}>Desde:</label>
+                <input
+                  id="dateStart"
+                  type="date"
+                  className="date-input"
+                  value={dateFilterStart}
+                  onChange={(e) => setDateFilterStart(e.target.value)}
+                  style={{ padding: '0.6rem 0.8rem' }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <label htmlFor="dateEnd" style={{ fontWeight: 600 }}>Hasta:</label>
+                <input
+                  id="dateEnd"
+                  type="date"
+                  className="date-input"
+                  value={dateFilterEnd}
+                  onChange={(e) => setDateFilterEnd(e.target.value)}
+                  style={{ padding: '0.6rem 0.8rem' }}
+                />
+              </div>
+              
+              {(allSalesSearchTerm || dateFilterStart || dateFilterEnd) && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => {
+                    setAllSalesSearchTerm('');
+                    setDateFilterStart('');
+                    setDateFilterEnd('');
+                  }}
+                >
+                  Limpiar Filtros
                 </button>
               )}
             </div>
@@ -529,7 +673,8 @@ function HomePage() {
             {/* Vista de detalles reutilizada */}
             <SaleDetailsView 
               sale={selectedSale} 
-              onClose={() => setSelectedSale(null)} 
+              onClose={() => setSelectedSale(null)}
+              onStatusChange={loadSales}
             />
           </div>
         );
@@ -642,7 +787,8 @@ function HomePage() {
                 {/* Vista de detalles */}
                 <SaleDetailsView 
                   sale={selectedSale} 
-                  onClose={() => setSelectedSale(null)} 
+                  onClose={() => setSelectedSale(null)}
+                  onStatusChange={loadSales}
                 />
               </>
             ) : !loading && (

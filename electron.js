@@ -1,10 +1,69 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
+const express = require('express');
 
 // Detectar si estamos en desarrollo sin dependencia externa
 const isDev = !app.isPackaged;
 
 let mainWindow;
+let server;
+
+// Crear servidor Express para producción
+function startServer() {
+  return new Promise((resolve, reject) => {
+    const expressApp = express();
+    
+    // En producción empaquetada, los archivos están en el directorio de resources
+    let buildPath;
+    if (isDev) {
+      buildPath = path.join(__dirname, 'build');
+    } else {
+      // En el paquete, los archivos de build/** están en resources/app
+      buildPath = __dirname;
+    }
+    
+    console.log('Build path:', buildPath);
+    console.log('__dirname:', __dirname);
+    console.log('app.isPackaged:', app.isPackaged);
+    
+    // Verificar que index.html existe
+    const fs = require('fs');
+    const indexPath = path.join(buildPath, 'index.html');
+    console.log('Buscando index.html en:', indexPath);
+    console.log('Existe index.html:', fs.existsSync(indexPath));
+    
+    if (!fs.existsSync(indexPath)) {
+      // Intentar en la carpeta build
+      const altBuildPath = path.join(__dirname, 'build');
+      const altIndexPath = path.join(altBuildPath, 'index.html');
+      console.log('Intentando ruta alternativa:', altIndexPath);
+      console.log('Existe en ruta alternativa:', fs.existsSync(altIndexPath));
+      if (fs.existsSync(altIndexPath)) {
+        buildPath = altBuildPath;
+      }
+    }
+    
+    expressApp.use(express.static(buildPath));
+    
+    // Servir index.html para cualquier ruta (SPA)
+    expressApp.use((req, res) => {
+      const indexFile = path.join(buildPath, 'index.html');
+      console.log('Sirviendo:', indexFile);
+      res.sendFile(indexFile);
+    });
+    
+    server = expressApp.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      console.log(`Servidor local corriendo en puerto ${port} sirviendo desde ${buildPath}`);
+      resolve(port);
+    });
+    
+    server.on('error', (err) => {
+      console.error('Error al iniciar servidor:', err);
+      reject(err);
+    });
+  });
+}
 
 function createWindow() {
   // Obtener el tamaño de la pantalla
@@ -30,31 +89,51 @@ function createWindow() {
     },
     icon: path.join(__dirname, 'logo192.png'),
     backgroundColor: '#ffffff',
-    show: false,
-    title: 'Sistema de Gestión de Calzado',
+    show: true, // Mostrar inmediatamente para ver errores
+    title: 'CalzaSoft',
     autoHideMenuBar: false // Siempre mostrar el menú
   });
 
   // Cargar la app
-  const startUrl = isDev 
-    ? 'http://localhost:3000' 
-    : `file://${path.join(__dirname, 'index.html')}`;
-  
-  mainWindow.loadURL(startUrl);
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.webContents.openDevTools();
+  } else {
+    // En producción, iniciar servidor local y cargar desde ahí
+    console.log('Iniciando servidor en producción...');
+    startServer().then((port) => {
+      const url = `http://127.0.0.1:${port}`;
+      console.log('Cargando URL:', url);
+      mainWindow.loadURL(url);
+    }).catch((err) => {
+      console.error('Error al iniciar servidor:', err);
+      // Mostrar ventana con mensaje de error
+      mainWindow.loadURL(`data:text/html,<html><body><h1>Error al iniciar la aplicación</h1><pre>${err.message}</pre></body></html>`);
+      mainWindow.show();
+    });
+  }
 
   // Mostrar ventana cuando esté lista
   mainWindow.once('ready-to-show', () => {
+    console.log('Ventana lista para mostrar');
     mainWindow.show();
   });
 
-  // Abrir DevTools en desarrollo
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
+  // Logs para depuración
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Error al cargar:', errorCode, errorDescription);
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('Contenido cargado exitosamente');
+  });
 
   // Emitido cuando la ventana es cerrada
   mainWindow.on('closed', () => {
     mainWindow = null;
+    if (server) {
+      server.close();
+    }
   });
 
   // Crear menú personalizado

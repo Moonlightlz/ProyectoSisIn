@@ -225,15 +225,27 @@ class SaleService {
   }
 
   // Actualizar estado de venta
-  async updateSaleStatus(saleId: string, status: Sale['status']): Promise<void> {
+  async updateSaleStatus(saleId: string, status: string, updatedBy?: string): Promise<void> {
     try {
       console.log('📝 Actualizando estado de venta:', saleId, status);
       
       const saleRef = doc(db, this.collectionName, saleId);
-      await updateDoc(saleRef, {
+      const updateData: any = {
         status,
         updatedAt: Timestamp.now()
-      });
+      };
+
+      // Si se proporciona el usuario que actualizó, agregarlo
+      if (updatedBy) {
+        updateData.updatedBy = updatedBy;
+        updateData.statusHistory = {
+          status: status,
+          changedBy: updatedBy,
+          changedAt: Timestamp.now()
+        };
+      }
+
+      await updateDoc(saleRef, updateData);
 
       console.log('✅ Estado de venta actualizado exitosamente');
     } catch (error) {
