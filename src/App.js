@@ -11,6 +11,7 @@ import WorkerManagement from './components/WorkerManagement';
 import ReportsPage from './components/ReportsPage'; // 1. Importar ReportsPage
 import ClusteringPage from './components/ClusteringPage';
 import AppLayout from './components/AppLayout';
+import EmergencySuperAdminSetup from './components/EmergencySuperAdminSetup'; // Importar herramienta de emergencia
 
 import './App.css';
 import './debugUser'; // Importar herramientas de debugging
@@ -32,6 +33,10 @@ function AppContent() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route
+          path="/emergency-super-admin"
+          element={<EmergencySuperAdminSetup />}
+        />
         <Route
           path="/login"
           element={currentUser ? <Navigate to="/" /> : <Login />}

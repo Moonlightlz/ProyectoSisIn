@@ -5,8 +5,8 @@ import './AppLayout.css';
 
 function AppLayout({ onLogout }) {
   const { userRole, currentUser } = useAuth();
-  const isAdmin = userRole === 'admin';
-  
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
   console.log('AppLayout - userRole:', userRole, 'isAdmin:', isAdmin);
 
   const handleLogout = async () => {

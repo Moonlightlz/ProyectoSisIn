@@ -30,7 +30,7 @@ const actionNames = {
   retencion: 'Retención (lotes dudosos)',
 };
 
-function UserForm({ onAddUser }) {
+function UserForm({ onAddUser, currentUserRole }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,6 +39,9 @@ function UserForm({ onAddUser }) {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
+  
+  // Verificar si es super admin
+  const isSuperAdmin = currentUserRole === 'super_admin';
 
   // Maneja el cambio de estado de un permiso específico
   const handlePermissionChange = (windowKey, actionKey) => {
@@ -118,9 +121,11 @@ function UserForm({ onAddUser }) {
         <div className="form-group">
           <label htmlFor="role">Rol:</label>
           <select id="role" value={role} onChange={(e) => setRole(e.target.value)} className="role-select">
-            <option value="admin">Administrador</option>
+            {isSuperAdmin && <option value="admin">Administrador</option>}
             <option value="supervisor">Supervisor</option>
+            {isSuperAdmin && <option value="admin_supervisor">Admin + Supervisor</option>}
           </select>
+          {!isSuperAdmin && <small style={{color: '#666', marginTop: '5px', display: 'block'}}>Solo puedes crear supervisores. Contacta al Super Admin para crear administradores.</small>}
         </div>
 
         {role === 'supervisor' && ( // Muestra la sección de permisos solo si el rol es supervisor

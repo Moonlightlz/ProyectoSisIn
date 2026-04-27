@@ -34,8 +34,8 @@ function UserManagement() {
     }
   });
 
-  // Verificar si el usuario actual es administrador
-  const isAdmin = userRole === 'admin';
+  // Verificar si el usuario actual es administrador o super admin
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   console.log('isAdmin check:', isAdmin, 'userRole:', userRole);
 
   useEffect(() => {
@@ -394,8 +394,9 @@ function UserManagement() {
                 }}
               >
                 <option value="supervisor">Supervisor</option>
-                <option value="admin">Administrador</option>
+                {userRole === 'super_admin' && <option value="admin">Administrador</option>}
               </select>
+              {userRole !== 'super_admin' && <small style={{color: '#666', marginTop: '5px', display: 'block'}}>Solo puedes crear supervisores.</small>}
             </div>
 
             <div className="permissions-section">

@@ -1,0 +1,158 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- FUNCIONES DE AYUDA ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Obtiene el rol del usuario actual
+    function getUserRole() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.data.get('role', null);
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'super_admin';
+    }
+
+    function isAdmin() {
+      let role = getUserRole();
+      return isAuthenticated() && (role == 'admin' || role == 'super_admin');
+    }
+
+    // Contar cuántos super admins existen
+    function countSuperAdmins() {
+      return firestore.query('users').where('role', '==', 'super_admin').size();
+    }
+
+    // --- REGLAS POR COLECCIÓN ---
+
+    // Usuarios: Manejo de perfiles y roles
+    match /users/{userId} {
+      // Cualquier usuario autenticado puede leer perfiles
+      allow read: if isAuthenticated();
+      
+      // CREAR: Permitir creación si:
+      // 1. Estás creando el super admin (sin importar quién lo cree)
+      // 2. O eres admin/super admin creando otros usuarios
+      allow create: if (request.resource.data.get('role') == 'super_admin') 
+                    || isAdmin();
+      
+      // ACTUALIZAR: Permitir actualización si:
+      // 1. Eres super admin
+      // 2. O eres el dueño Y no cambias tu rol
+      allow update: if isSuperAdmin() 
+                    || (isOwner(userId) && request.resource.data.role == resource.data.role);
+      
+      // ELIMINAR: Solo super admin
+      allow delete: if isSuperAdmin();
+    }
+
+    // Colección de trabajadores, asistencias, nóminas y ventas
+    match /workers/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /attendance/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /attendance_logs/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /bonuses/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /payrollSettings/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /payroll_records/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /payroll_adjustments/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /sales/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /products/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /customers/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /reports/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+
+    // Inventario y Materias Primas (Incluyendo subcolecciones)
+    match /rawMaterials/{materialId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      
+      match /movements/{movementId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /inventory/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /inventoryMovements/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /purchaseOrders/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+
+    // Análisis y Clustering
+    match /customerClusters/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /materialClusters/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    match /clusters/{id} { 
+      allow read: if isAuthenticated(); 
+      allow write: if isAdmin(); 
+    }
+    
+    // Configuración de metadatos
+    match /metadata/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin() || true; // Permitir durante setup
+    }
+
+    // Usuarios pendientes
+    match /pendingUsers/{userId} {
+      allow read, write: if isAuthenticated(); 
+    }
+
+    // --- BLOQUEO GLOBAL ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
