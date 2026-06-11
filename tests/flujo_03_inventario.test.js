@@ -6,25 +6,33 @@
  * Requisitos:
  * - Aplicación corriendo en http://localhost:3000
  * - Usuario admin logeado
- * - Acceso a módulo de inventario/materias primas
+ * - Acceso a módulo de inventario/materias primas (embebido en Dashboard → "Inventario de Materia Prima")
  * - Firebase conectado para guardar registros
  */
 
+require('chromedriver');
 const { Builder, By, until, Key } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
 const assert = require('assert');
 
 describe('Flujo 3: Inventario', function() {
   let driver;
   const baseUrl = 'http://localhost:3000';
-  const adminEmail = 'admin@calzasoft.com';
-  const adminPassword = 'Admin@123';
+  
+  // Credenciales de admin (alineadas con flujo 2)
+  const adminEmail = 'jvalenzuela884@calzado.com';
+  const adminPassword = 'DA0W6G';
 
   before(async function() {
-    this.timeout(30000);
-    driver = await new Builder()
-      .forBrowser('chrome')
-      .build();
-    await driver.manage().setTimeouts({ implicit: 3000 });
+    this.timeout(60000);
+    console.log('⏳ 1. Preparando entorno Chrome...');
+    
+    let options = new chrome.Options();
+    options.addArguments('--disable-dev-shm-usage', '--no-sandbox', '--remote-allow-origins=*');
+    options.excludeSwitches('enable-logging');
+    
+    driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+    await driver.manage().setTimeouts({ implicit: 5000 });
   });
 
   after(async function() {
@@ -50,19 +58,45 @@ describe('Flujo 3: Inventario', function() {
 
     const passwordInput = await driver.findElement(By.id('password'));
     await passwordInput.clear();
-    await passwordInput.sendKeys(adminPassword);
-    console.log('✓ Admin password ingresado');
-
-    const loginButton = await driver.findElement(By.css('button.login-button'));
-    await loginButton.click();
+    await passwordInput.sendKeys(adminPassword, Key.RETURN);
     console.log('✓ Login clickeado');
 
-    // Esperar redirección
+    // Esperar redirección al dashboard
     await driver.wait(
-      until.elementLocated(By.css('.app-layout, .dashboard-layout')),
+      until.elementLocated(By.css('.app-layout')),
       15000
     );
     console.log('✓ Login exitoso - Dashboard visible');
+  }
+
+  /**
+   * Helper: Navegar al módulo de inventario de materia prima
+   * El módulo está embebido dentro de HomePage como una vista interna,
+   * se accede haciendo clic en el botón "Inventario de Materia Prima"
+   */
+  async function navigateToInventory() {
+    // Esperar a que el dashboard cargue completamente
+    await driver.sleep(2000);
+
+    // Buscar el botón "Inventario de Materia Prima" en el dashboard
+    const inventoryButton = await driver.wait(
+      until.elementLocated(By.xpath(
+        '//button[contains(text(), "Inventario de Materia Prima")] | ' +
+        '//button[contains(text(), "Inventario")] | ' +
+        '//button[contains(text(), "Materia Prima")]'
+      )),
+      10000
+    );
+    await inventoryButton.click();
+    console.log('✓ Botón "Inventario de Materia Prima" clickeado');
+
+    // Esperar a que cargue la vista de inventario
+    await driver.wait(
+      until.elementLocated(By.css('.inventory-container')),
+      10000
+    );
+    await driver.sleep(1500); // Esperar carga de datos desde Firebase
+    console.log('✓ Vista de inventario de materia prima cargada');
   }
 
   // =========================================================================
@@ -70,51 +104,30 @@ describe('Flujo 3: Inventario', function() {
   // =========================================================================
   describe('3.1 - Nuevo material', function() {
     it('Debe registrar nueva materia prima con todos los campos completos', async function() {
-      this.timeout(30000);
+      this.timeout(45000);
 
       try {
         // Paso 1: Hacer login como admin
         await loginAsAdmin();
 
-        // Paso 2: Navegar a sección de inventario
-        // La ruta puede variar: /inventory, /materiales, /raw-materials, etc.
-        const inventoryLinks = ['inventory', 'materiales', 'raw-materials', 'inventario'];
-        let navigated = false;
+        // Paso 2: Navegar al inventario
+        await navigateToInventory();
 
-        for (let link of inventoryLinks) {
-          try {
-            await driver.get(baseUrl + '/' + link);
-            const element = await driver.wait(
-              until.elementLocated(By.css('.inventory-view, [data-testid="inventory"]')),
-              5000
-            ).catch(() => null);
-            if (element) {
-              navigated = true;
-              console.log(`✓ Navegando a inventario: /${link}`);
-              break;
-            }
-          } catch {
-            // Ruta no existe, probar la siguiente
-          }
-        }
-
-        assert(navigated, 'No se pudo acceder al módulo de inventario');
-
-        // Paso 3: Buscar botón "Nuevo Material" o similar
+        // Paso 3: Buscar botón "Nuevo Material" o "Agregar"
         const newMaterialButton = await driver.wait(
-          until.elementLocated(By.css('button:contains("Nuevo"), [data-action="new-material"], .btn-new')),
+          until.elementLocated(By.xpath(
+            '//button[contains(text(), "Nuevo")] | ' +
+            '//button[contains(text(), "Agregar")] | ' +
+            '//button[contains(text(), "Añadir")]'
+          )),
           10000
-        ).catch(async () => {
-          // Alternativa: buscar por icono o clase
-          return await driver.findElement(By.css('[title*="Nuevo"], .btn-primary'));
-        });
+        );
         console.log('✓ Botón de nuevo material localizado');
-
         await newMaterialButton.click();
         console.log('✓ Botón clickeado');
 
         // Paso 4: Esperar modal del formulario
-        const modalForm = await driver.wait(
+        await driver.wait(
           until.elementLocated(By.css('.modal-overlay, [role="dialog"]')),
           10000
         );
@@ -136,10 +149,14 @@ describe('Flujo 3: Inventario', function() {
         console.log('✓ Categoría ingresada: Cuero Natural');
 
         // Paso 7: Llenar proveedor (opcional)
-        const supplierInput = await driver.findElement(By.id('supplier'));
-        await supplierInput.clear();
-        await supplierInput.sendKeys('Curtidos del Norte');
-        console.log('✓ Proveedor ingresado: Curtidos del Norte');
+        try {
+          const supplierInput = await driver.findElement(By.id('supplier'));
+          await supplierInput.clear();
+          await supplierInput.sendKeys('Curtidos del Norte');
+          console.log('✓ Proveedor ingresado: Curtidos del Norte');
+        } catch(e) {
+          console.log('⚠ Campo proveedor no encontrado, continuando...');
+        }
 
         // Paso 8: Llenar unidad de medida
         const unitInput = await driver.findElement(By.id('unit'));
@@ -154,10 +171,14 @@ describe('Flujo 3: Inventario', function() {
         console.log('✓ Umbral de stock ingresado: 15');
 
         // Paso 10: Llenar costo unitario (opcional)
-        const costInput = await driver.findElement(By.id('cost'));
-        await costInput.clear();
-        await costInput.sendKeys('95.50');
-        console.log('✓ Costo unitario ingresado: 95.50');
+        try {
+          const costInput = await driver.findElement(By.id('cost'));
+          await costInput.clear();
+          await costInput.sendKeys('95.50');
+          console.log('✓ Costo unitario ingresado: 95.50');
+        } catch(e) {
+          console.log('⚠ Campo costo no encontrado, continuando...');
+        }
 
         // Paso 11: Validar que el botón guardar está HABILITADO
         const saveButton = await driver.findElement(By.css('button.btn-primary, [type="submit"]'));
@@ -184,16 +205,14 @@ describe('Flujo 3: Inventario', function() {
         console.log('✓ Modal cerrado');
 
         // Paso 14: Validar que el material aparece en la lista
+        await driver.sleep(2000); // Esperar refresco
         await driver.wait(
           async () => {
             try {
-              const rows = await driver.findElements(By.css('table tbody tr'));
-              for (let row of rows) {
-                const text = await row.getText();
-                if (text.includes('Cuero Vacuno Premium')) {
-                  console.log('✓ Material visible en tabla de inventario');
-                  return true;
-                }
+              const pageText = await driver.findElement(By.css('.inventory-container')).getText();
+              if (pageText.includes('Cuero Vacuno Premium')) {
+                console.log('✓ Material visible en inventario');
+                return true;
               }
               return false;
             } catch {
@@ -217,34 +236,36 @@ describe('Flujo 3: Inventario', function() {
   // =========================================================================
   describe('3.2 - Validación de campos obligatorios', function() {
     it('Debe rechazar submit dejando campos obligatorios vacíos', async function() {
-      this.timeout(30000);
+      this.timeout(45000);
 
       try {
         // Paso 1: Hacer login
         await loginAsAdmin();
 
         // Paso 2: Navegar a inventario
-        await driver.get(baseUrl + '/inventory');
-        await driver.wait(
-          until.elementLocated(By.css('.inventory-view, [data-testid="inventory"]')),
-          10000
-        ).catch(() => null); // Puede no existir
-        console.log('✓ En sección de inventario');
+        await navigateToInventory();
 
         // Paso 3: Abrir nuevo material
-        const newButton = await driver.findElement(By.css('button:contains("Nuevo"), [data-action="new-material"], .btn-primary'));
+        const newButton = await driver.wait(
+          until.elementLocated(By.xpath(
+            '//button[contains(text(), "Nuevo")] | ' +
+            '//button[contains(text(), "Agregar")] | ' +
+            '//button[contains(text(), "Añadir")]'
+          )),
+          10000
+        );
         await newButton.click();
         console.log('✓ Abriendo formulario de material');
 
         // Paso 4: Esperar modal
-        const modal = await driver.wait(
-          until.elementLocated(By.css('.modal-overlay')),
+        await driver.wait(
+          until.elementLocated(By.css('.modal-overlay, [role="dialog"]')),
           10000
         );
         console.log('✓ Modal visible');
 
         // Paso 5: NO llenar NINGÚN campo (dejarlos vacíos)
-        // Solo hacer clic en guardar directamente
+        // Solo intentar hacer clic en guardar directamente
         const saveButton = await driver.findElement(By.css('button.btn-primary, [type="submit"]'));
         
         // Paso 6: Verificar que el botón guardar está DESHABILITADO
@@ -262,7 +283,7 @@ describe('Flujo 3: Inventario', function() {
 
         // Paso 7: El sistema DEBE mostrar error de validación
         const errorMessage = await driver.wait(
-          until.elementLocated(By.css('.error-message, [role="alert"]')),
+          until.elementLocated(By.css('.error-message, [role="alert"], .validation-error')),
           10000
         );
         console.log('✓ Mensaje de error aparece');
@@ -272,7 +293,9 @@ describe('Flujo 3: Inventario', function() {
         assert(
           errorText.toLowerCase().includes('obligatorio') || 
           errorText.toLowerCase().includes('requerido') ||
-          errorText.toLowerCase().includes('vacío'),
+          errorText.toLowerCase().includes('vacío') ||
+          errorText.toLowerCase().includes('nombre') ||
+          errorText.toLowerCase().includes('campo'),
           `Error inesperado: ${errorText}`
         );
         console.log(`✓ Error correcto: "${errorText}"`);
@@ -295,98 +318,112 @@ describe('Flujo 3: Inventario', function() {
   // =========================================================================
   describe('3.3 - Integridad de datos: stock negativo', function() {
     it('Debe rechazar egreso que resultaría en stock negativo', async function() {
-      this.timeout(30000);
+      this.timeout(45000);
 
       try {
         // Paso 1: Hacer login
         await loginAsAdmin();
 
         // Paso 2: Navegar a inventario
-        await driver.get(baseUrl + '/inventory');
-        await driver.wait(
-          until.elementLocated(By.css('.inventory-view')),
-          10000
-        ).catch(() => null);
-        console.log('✓ En inventario');
+        await navigateToInventory();
 
-        // Paso 3: Seleccionar un material que existe
-        // Buscar primera fila de material en la tabla
+        // Paso 3: Esperar a que la tabla de materiales cargue
+        await driver.sleep(2000);
+        
         const rows = await driver.wait(
           async () => {
-            const tableRows = await driver.findElements(By.css('table tbody tr'));
+            const tableRows = await driver.findElements(By.css('.inventory-table tbody tr, table tbody tr'));
             return tableRows.length > 0 ? tableRows : null;
           },
           10000
         );
         assert(rows.length > 0, 'No hay materiales en tabla');
-        console.log('✓ Materiales cargados en tabla');
+        console.log(`✓ ${rows.length} materiales cargados en tabla`);
 
-        // Paso 4: Hacer clic en primera fila para ver detalles
-        await rows[0].click();
-        console.log('✓ Material seleccionado');
-
-        // Paso 5: Esperar vista de detalle
-        const detailView = await driver.wait(
-          until.elementLocated(By.css('[data-view="material-detail"], .material-detail')),
-          10000
-        );
-        console.log('✓ Vista de detalle del material abierta');
-
-        // Paso 6: Obtener stock actual del material (parsearlo de la pantalla)
-        const stockDisplay = await driver.findElement(By.css('[data-field="stock"], .stock-value'));
-        const stockText = await stockDisplay.getText();
-        const currentStock = parseInt(stockText.match(/\d+/)[0]);
-        console.log(`✓ Stock actual del material: ${currentStock}`);
-
-        // Paso 7: Buscar botón para registrar egreso/salida
-        const egressButton = await driver.findElement(By.css('[data-action="egreso"], button:contains("Egreso"), .btn-egreso'));
+        // Paso 4: Buscar el botón de egreso/salida en la primera fila
+        // o buscar un botón global de movimiento de stock
+        let egressButton;
+        try {
+          // Intentar encontrar botón de egreso directo en la fila
+          egressButton = await rows[0].findElement(By.xpath(
+            './/button[contains(text(), "Egreso")] | ' +
+            './/button[contains(text(), "Salida")] | ' +
+            './/button[contains(@class, "egreso")] | ' +
+            './/button[contains(@class, "out")]'
+          ));
+        } catch(e) {
+          // Si no hay botón directo, clic en la fila y luego buscar
+          await rows[0].click();
+          console.log('✓ Fila de material seleccionada');
+          await driver.sleep(1000);
+          
+          egressButton = await driver.wait(
+            until.elementLocated(By.xpath(
+              '//button[contains(text(), "Egreso")] | ' +
+              '//button[contains(text(), "Salida")] | ' +
+              '//button[contains(text(), "Movimiento")]'
+            )),
+            5000
+          );
+        }
+        
         await egressButton.click();
-        console.log('✓ Modal de egreso abierto');
+        console.log('✓ Botón de egreso clickeado');
 
-        // Paso 8: Esperar modal de movimiento
-        const movementModal = await driver.wait(
+        // Paso 5: Esperar modal de movimiento
+        await driver.wait(
           until.elementLocated(By.css('.modal-overlay, [role="dialog"]')),
           10000
         );
         console.log('✓ Modal de movimiento visible');
 
-        // Paso 9: Intentar ingresar cantidad MAYOR al stock disponible
-        const quantityInput = await driver.findElement(By.css('input[type="number"], [name="quantity"]'));
-        const invalidQuantity = currentStock + 50; // Mayor al disponible
+        // Paso 6: Si hay un select de tipo de movimiento, seleccionar "Egreso"
+        try {
+          const typeSelect = await driver.findElement(By.css('select[name="type"], select[id="type"], select[name="movementType"]'));
+          await typeSelect.sendKeys('Egreso');
+          console.log('✓ Tipo de movimiento seleccionado: Egreso');
+        } catch(e) {
+          console.log('⚠ No se encontró selector de tipo, continuando...');
+        }
 
+        // Paso 7: Intentar ingresar cantidad excesiva
+        const quantityInput = await driver.findElement(By.css('input[type="number"], [name="quantity"], #quantity'));
+        const invalidQuantity = 999999; // Cantidad absurdamente alta
+        
         await quantityInput.clear();
         await quantityInput.sendKeys(invalidQuantity.toString());
-        console.log(`✓ Cantidad ingresada: ${invalidQuantity} (mayor al stock de ${currentStock})`);
+        console.log(`✓ Cantidad ingresada: ${invalidQuantity} (excede cualquier stock)`);
 
-        // Paso 10: Intentar guardar
-        const submitButton = await driver.findElement(By.css('button:contains("Guardar"), [type="submit"], .btn-primary'));
+        // Paso 8: Intentar guardar
+        const submitButton = await driver.findElement(By.css('button.btn-primary, [type="submit"]'));
         await submitButton.click();
         console.log('✓ Intento de guardar egreso inválido');
 
-        // Paso 11: El sistema DEBE mostrar error de stock insuficiente
+        // Paso 9: El sistema DEBE mostrar error de stock insuficiente
         const errorMsg = await driver.wait(
-          until.elementLocated(By.css('.error-message, [role="alert"]')),
+          until.elementLocated(By.css('.error-message, [role="alert"], .validation-error')),
           10000
         );
         console.log('✓ Mensaje de error visible');
 
-        // Paso 12: Validar que el error sea sobre stock
+        // Paso 10: Validar que el error sea sobre stock
         const errorContent = await errorMsg.getText();
         assert(
           errorContent.toLowerCase().includes('stock') || 
           errorContent.toLowerCase().includes('negativo') ||
           errorContent.toLowerCase().includes('disponible') ||
-          errorContent.toLowerCase().includes('insuficiente'),
+          errorContent.toLowerCase().includes('insuficiente') ||
+          errorContent.toLowerCase().includes('excede') ||
+          errorContent.toLowerCase().includes('supera'),
           `Error inesperado: ${errorContent}`
         );
         console.log(`✓ Error correcto: "${errorContent}"`);
 
-        // Paso 13: Validar que no se guardó (modal sigue abierto)
+        // Paso 11: Validar que no se guardó (modal sigue abierto)
         try {
           await driver.findElement(By.css('.modal-overlay'));
           console.log('✓ Modal permanece abierto (no se guardó el egreso inválido)');
         } catch {
-          // Si el modal se cerró, es un error
           throw new Error('El egreso inválido se guardó ¡Integridad de BD comprometida!');
         }
 

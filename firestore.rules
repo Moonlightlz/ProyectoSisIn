@@ -57,12 +57,14 @@ service cloud.firestore {
 
     // Colección de trabajadores, asistencias, nóminas y ventas
     match /workers/{id} { 
-      allow read: if isAuthenticated(); 
+      // Lectura pública: necesaria para la interfaz de asistencia (buscar trabajador por DNI)
+      allow read: if true; 
       allow write: if isAdmin(); 
     }
     match /attendance/{id} { 
-      allow read: if isAuthenticated(); 
-      allow write: if isAdmin(); 
+      // Lectura y escritura pública: necesaria para registrar asistencia desde la interfaz pública
+      allow read: if true;
+      allow write: if true; 
     }
     match /attendance_logs/{id} { 
       allow read: if isAuthenticated(); 

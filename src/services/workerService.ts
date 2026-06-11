@@ -1,4 +1,5 @@
 // Servicio para manejar todas las operaciones de trabajadores en Firestore
+import { workerCacheService } from './workerCacheService';
 import { 
   collection, 
   doc, 
@@ -27,71 +28,57 @@ const PAYROLL_SETTINGS_COLLECTION = 'payrollSettings';
 // OPERACIONES DE TRABAJADORES
 // ===============================
 
+// Función interna que consulta Firestore directamente (sin caché)
+const _fetchWorkersFromFirestore = async (): Promise<Worker[]> => {
+  console.log('Intentando cargar trabajadores desde Firestore...');
+  const workersRef = collection(db, WORKERS_COLLECTION);
+  
+  const snapshot = await getDocs(workersRef);
+  console.log('Documentos encontrados:', snapshot.size);
+  
+  if (snapshot.empty) {
+    console.log('No hay trabajadores en la base de datos. Retornando array vacío.');
+    return [];
+  }
+  
+  const allWorkers = snapshot.docs.map(doc => {
+    const data = doc.data();
+    
+    // Procesar lastSalaryAdjustment si existe
+    let lastSalaryAdjustment = undefined;
+    if (data.lastSalaryAdjustment) {
+      lastSalaryAdjustment = {
+        ...data.lastSalaryAdjustment,
+        adjustedAt: data.lastSalaryAdjustment.adjustedAt?.toDate() || new Date()
+      };
+    }
+    
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate(),
+      hireDate: data.hireDate?.toDate() || data.createdAt?.toDate() || new Date(),
+      lastSalaryAdjustment: lastSalaryAdjustment
+    } as Worker;
+  });
+  
+  const workers = allWorkers
+    .filter(worker => worker.status !== 'inactive')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  
+  console.log('Trabajadores procesados:', workers.length);
+  return workers;
+};
+
 export const workerService = {
-  // Obtener todos los trabajadores activos
+  // Obtener todos los trabajadores activos (con caché)
   async getAllWorkers(): Promise<Worker[]> {
     try {
-      console.log('Intentando cargar trabajadores desde Firestore...');
-      const workersRef = collection(db, WORKERS_COLLECTION);
-      
-      // Primero intentar obtener todos los documentos sin filtros complejos
-      const snapshot = await getDocs(workersRef);
-      console.log('Documentos encontrados:', snapshot.size);
-      
-      if (snapshot.empty) {
-        console.log('No hay trabajadores en la base de datos. Retornando array vacío.');
-        return [];
-      }
-      
-      const allWorkers = snapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Datos del trabajador:', doc.id, data);
-        console.log('currentSalary:', data.currentSalary);
-        console.log('lastSalaryAdjustment:', data.lastSalaryAdjustment);
-        
-        // Procesar lastSalaryAdjustment si existe
-        let lastSalaryAdjustment = undefined;
-        if (data.lastSalaryAdjustment) {
-          console.log('Procesando ajuste de sueldo...');
-          lastSalaryAdjustment = {
-            ...data.lastSalaryAdjustment,
-            adjustedAt: data.lastSalaryAdjustment.adjustedAt?.toDate() || new Date()
-          };
-          console.log('Ajuste procesado:', lastSalaryAdjustment);
-        }
-        
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate(),
-          hireDate: data.hireDate?.toDate() || data.createdAt?.toDate() || new Date(),
-          lastSalaryAdjustment: lastSalaryAdjustment
-        } as Worker;
-      });
-      
-      const workers = allWorkers
-        .filter(worker => worker.status !== 'inactive') // Filtrar en cliente
-        .sort((a, b) => a.name.localeCompare(b.name));
-      
-      console.log('Trabajadores procesados:', workers.length);
-      return workers;
+      return await workerCacheService.getCachedWorkers(_fetchWorkersFromFirestore);
     } catch (error) {
-      console.error('Error detallado al cargar trabajadores:', error);
-      // Si falla la carga, retornar datos de ejemplo para desarrollo
-      console.log('Retornando datos de ejemplo...');
-      return [
-        {
-          id: 'demo-1',
-          name: 'Juan Pérez (Demo)',
-          dni: '12345678',
-          position: 'Operario',
-          baseSalary: 1500,
-          hireDate: new Date('2024-01-15'),
-          status: 'active',
-          createdAt: new Date()
-        }
-      ] as Worker[];
+      console.error('Error al cargar trabajadores desde Firebase:', error);
+      throw new Error('No se pudieron cargar los trabajadores. Verifica tu conexión a internet y la configuración de Firebase.');
     }
   },
 
@@ -140,6 +127,7 @@ export const workerService = {
       };
 
       const docRef = await addDoc(collection(db, WORKERS_COLLECTION), newWorker);
+      workerCacheService.invalidateCache(); // Invalidar caché tras crear trabajador
       return docRef.id;
     } catch (error) {
       console.error('Error creating worker:', error);
@@ -157,6 +145,7 @@ export const workerService = {
       };
 
       await updateDoc(doc(db, WORKERS_COLLECTION, workerId), updateData);
+      workerCacheService.invalidateCache(); // Invalidar caché tras actualizar trabajador
     } catch (error) {
       console.error('Error updating worker:', error);
       throw new Error('No se pudo actualizar el trabajador');
@@ -173,6 +162,7 @@ export const workerService = {
         updatedAt: Timestamp.now(),
         updatedBy: deletedBy
       });
+      workerCacheService.invalidateCache(); // Invalidar caché tras eliminar trabajador
     } catch (error) {
       console.error('Error deleting worker:', error);
       throw new Error('No se pudo eliminar el trabajador');
