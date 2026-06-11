@@ -1,0 +1,67 @@
+// ============================================================================
+// Extracto de configuración para agregar a package.json
+// ============================================================================
+// 
+// Opción 1: Usar el comando automatizado
+// $ npm install selenium-webdriver mocha chromedriver --save-dev
+//
+// Opción 2: Agregar manualmente este extracto a tu package.json (sección "devDependencies")
+// Luego ejecutar: $ npm install
+//
+// ============================================================================
+
+{
+  "name": "calzasoft",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "firebase": "^9.0.0"
+    // ... tus dependencias existentes
+  },
+  "devDependencies": {
+    // AGREGAR ESTAS LÍNEAS:
+    "selenium-webdriver": "^4.15.0",
+    "mocha": "^10.2.0",
+    "chromedriver": "^124.0.0",
+    // ... tus otras devDependencies
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    
+    // AGREGAR ESTOS SCRIPTS:
+    "test:qa": "mocha tests/*.test.js --timeout 30000",
+    "test:qa:auth": "mocha tests/flujo_01_autenticacion.test.js --timeout 30000",
+    "test:qa:attendance": "mocha tests/flujo_02_asistencia.test.js --timeout 30000",
+    "test:qa:inventory": "mocha tests/flujo_03_inventario.test.js --timeout 30000",
+    "test:qa:reports": "mocha tests/flujo_04_reportes.test.js --timeout 30000",
+    "test:qa:json": "mocha tests/*.test.js --timeout 30000 --reporter json > test-results.json"
+  }
+}
+
+// ============================================================================
+// DESPUÉS DE AGREGAR, USAR ESTOS COMANDOS:
+// ============================================================================
+//
+// Todos los tests:
+// $ npm run test:qa
+//
+// Solo autenticación:
+// $ npm run test:qa:auth
+//
+// Solo asistencia:
+// $ npm run test:qa:attendance
+//
+// Solo inventario:
+// $ npm run test:qa:inventory
+//
+// Solo reportes:
+// $ npm run test:qa:reports
+//
+// Exportar a JSON:
+// $ npm run test:qa:json
+//
+// ============================================================================

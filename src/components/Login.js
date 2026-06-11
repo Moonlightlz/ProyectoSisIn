@@ -107,7 +107,7 @@ function Login({ onLoginSuccess }) { // Recibe onLoginSuccess como prop
   useEffect(() => {
     const findUserAndCheckAttendance = async () => {
       if (dni.length === 8) {
-        const user = workers.find(worker => worker.dni === dni);
+        const user = workers.find(worker => String(worker.dni) === String(dni));
         setFoundUser(user || null);
 
         if (user) {
