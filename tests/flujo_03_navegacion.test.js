@@ -1,5 +1,5 @@
 /**
- * Flujo 4: Dashboards, Módulos y Rendimiento (RF-08)
+ * Flujo 3: Dashboards, Módulos y Rendimiento (RF-08)
  * ==================================================
  * Matriz Oficial de 4 Casos de Prueba.
  * Fix: Botón azul (Focus) resuelto enviando tecla ENTER nativa.
