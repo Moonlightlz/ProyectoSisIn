@@ -1,5 +1,11 @@
 # 🎯 CHEAT SHEET - QUICK REFERENCE
 
+**Actualizado:** 2026-06-12  
+**Total de Casos:** 13 casos funcionales en 5 flujos  
+**Estado:** ✅ LISTO PARA PRODUCCIÓN
+
+---
+
 ## 📥 INSTALACIÓN (60 segundos)
 
 ```bash
@@ -19,37 +25,41 @@ npx chromedriver --version
 
 | Comando | Descripción |
 |---------|-------------|
-| `npx mocha tests/*.test.js --timeout 30000` | **TODOS los tests (12 casos)** |
-| `npx mocha tests/flujo_01_*.test.js --timeout 30000` | Solo autenticación (3 tests) |
-| `npx mocha tests/flujo_02_*.test.js --timeout 30000` | Solo asistencia (3 tests) |
-| `npx mocha tests/flujo_03_*.test.js --timeout 30000` | Solo inventario (3 tests) |
-| `npx mocha tests/flujo_04_*.test.js --timeout 30000` | Solo reportes (3 tests) |
+| `npx mocha tests/*.test.js --timeout 30000` | **TODOS los tests (13 casos)** |
+| `npx mocha tests/flujo_01_*.test.js --timeout 30000` | Autenticación (3 tests) |
+| `npx mocha tests/flujo_02_*.test.js --timeout 30000` | Asistencia (3 tests) |
+| `npx mocha tests/flujo_03_*.test.js --timeout 30000` | Navegación (4 tests) |
+| `npx mocha tests/flujo_04_*.test.js --timeout 30000` | Trabajadores (2 tests) |
+| `npx mocha tests/flujo_05_*.test.js --timeout 30000` | Reportes (1 test) |
 | `npx mocha tests/*.test.js --grep "Login"` | Filtrar por nombre |
 
 ---
 
-## 📊 ESTRUCTURA DE TESTS
+## 📊 ESTRUCTURA DE TESTS (13 CASOS)
 
 ```
-Autenticación (3 tests)
-├── Login exitoso
-├── Login fallido
-└── Restricción de rutas
+Flujo 01 - Autenticación (3 tests)
+├── CP-01.01: Login exitoso
+├── CP-01.02: Login fallido
+└── CP-01.03: Reconocimiento por DNI (Asistencia)
 
-Asistencia (3 tests)
-├── Marcar entrada
-├── Doble entrada rechazada
-└── Auditoría de cambios
+Flujo 02 - Asistencia (3 tests)
+├── CP-02.01: Marcar entrada
+├── CP-02.02: Doble entrada rechazada
+└── CP-02.03: Auditoría de ajustes
 
-Inventario (3 tests)
-├── Nuevo material
-├── Validación de campos
-└── Stock negativo rechazado
+Flujo 03 - Navegación (4 tests)
+├── CP-03.01: Dashboard de Inicio
+├── CP-03.02: Módulo de Reportes
+├── CP-03.03: Módulo de Trabajadores
+└── CP-03.04: Rendimiento (< 4 segundos)
 
-Reportes (3 tests)
-├── Dashboard renderizado
-├── Empty state resiliente
-└── Consulta masiva
+Flujo 04 - Trabajadores (2 tests)
+├── CP-04.01 + CP-04.02 + CP-04.03 + CP-04.04: Gestión General
+└── CP-04.05: Acciones en Tarjetas
+
+Flujo 05 - Reportes (1 test)
+└── CP-05.01/05.02/05.03: Interacción de Gráficos e Históricos
 ```
 
 ---
@@ -149,11 +159,40 @@ Total: ~5-8 minutos
 ## 📈 SALIDA ESPERADA
 
 ```
-✓ passing 12
+✓ passing 13
 ✗ failing 0
 
-Duration: 400ms
+Duration: 6-8 minutos (demo mode con pausas)
 ```
+
+---
+
+## 📁 NUEVA ESTRUCTURA: CASOS DE PRUEBA DOCUMENTADOS
+
+```
+tests/
+├── casos_prueba/
+│   ├── casos_flujo_01_autenticacion.md      ← 3 casos CP-01.01 a CP-01.03
+│   ├── casos_flujo_02_asistencia.md         ← 3 casos CP-02.01 a CP-02.03
+│   ├── casos_flujo_03_navegacion.md         ← 4 casos CP-03.01 a CP-03.04
+│   ├── casos_flujo_04_trabajadores.md       ← 5 casos CP-04.01 a CP-04.05
+│   └── casos_flujo_05_reportes.md           ← 3 casos CP-05.01 a CP-05.03
+```
+
+---
+
+## 🔍 CADA CASO CONTIENE
+
+- ✅ ID único del caso
+- ✅ Descripción funcional
+- ✅ Precondiciones
+- ✅ Datos de entrada
+- ✅ Pasos de ejecución
+- ✅ Resultado esperado
+- ✅ Selectores reales (desde código fuente)
+- ✅ Componentes involucrados
+- ✅ Servicios y validaciones
+- ✅ Evidencia técnica
 
 ---
 
