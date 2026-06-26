@@ -48,7 +48,7 @@ Permite identificar:
 | 17 | RF-08: Históricos | 05 | CP-05.02 | 3.1 | HistoryAnalysisModal | N/A | `//button[Histórico]` | ✅ |
 | 18 | RF-08: Tablas | 05 | CP-05.03 | 3.1 | HistoryAnalysisModal | N/A | `table`, `td` | ✅ |
 
----
+--- 
 
 ## MATRIZ POR REQUERIMIENTO FUNCIONAL
 
